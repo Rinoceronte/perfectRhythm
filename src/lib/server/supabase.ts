@@ -1,19 +1,10 @@
-import { createServerClient } from '@supabase/ssr';
-import type { Cookies } from '@sveltejs/kit';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { createClient } from '@supabase/supabase-js';
+import { env } from '$env/dynamic/private';
 
-export function createSupabaseServerClient(cookies: Cookies) {
-	return createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-		cookies: {
-			getAll() {
-				return cookies.getAll();
-			},
-			setAll(cookiesToSet) {
-				cookiesToSet.forEach(({ name, value, options }) =>
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					cookies.set(name, value, { ...options, path: options?.path ?? '/' } as any)
-				);
-			}
-		}
-	});
-}
+const supabaseUrl = env.SUPABASE_URL || env.PUBLIC_SUPABASE_URL || '';
+const supabaseServiceKey = env.SUPABASE_SERVICE_KEY || '';
+
+// Storage-only admin client (auth is handled by our own session system)
+export const supabaseAdmin = supabaseServiceKey && supabaseUrl
+	? createClient(supabaseUrl, supabaseServiceKey)
+	: null as any; // Storage features unavailable without Supabase credentials

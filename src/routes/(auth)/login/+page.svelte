@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { supabase } from '$lib/supabase';
 	import { goto } from '$app/navigation';
 
 	let email = $state('');
@@ -12,13 +11,16 @@
 		error = '';
 		loading = true;
 
-		const { error: authError } = await supabase.auth.signInWithPassword({
-			email,
-			password
+		const res = await fetch('/api/v1/auth/login', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email, password })
 		});
 
-		if (authError) {
-			error = authError.message;
+		const result = await res.json();
+
+		if (result.error) {
+			error = result.error.message;
 			loading = false;
 			return;
 		}

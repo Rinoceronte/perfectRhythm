@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { supabase } from '$lib/supabase';
 	import { goto } from '$app/navigation';
 
 	let { children, data } = $props();
@@ -16,7 +15,7 @@
 	}
 
 	async function logout() {
-		await supabase.auth.signOut();
+		await fetch('/api/v1/auth/logout', { method: 'POST' });
 		goto('/login');
 	}
 

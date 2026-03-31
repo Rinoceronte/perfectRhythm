@@ -59,6 +59,7 @@ export const users = pgTable('users', {
 	followerLevel: competitionLevelEnum('follower_level'),
 	yearsDancing: integer('years_dancing'),
 	phone: text('phone'),
+	passwordHash: text('password_hash'),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
@@ -300,5 +301,21 @@ export const invisibleBlocks = pgTable(
 	(t) => [
 		unique('invisible_blocks_coach_student_unique').on(t.coachId, t.studentId),
 		index('idx_invisible_blocks_lookup').on(t.coachId, t.studentId)
+	]
+);
+
+export const sessions = pgTable(
+	'sessions',
+	{
+		id: text('id').primaryKey(),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		expiresAt: timestamp('expires_at').notNull(),
+		createdAt: timestamp('created_at').defaultNow().notNull()
+	},
+	(t) => [
+		index('idx_sessions_user').on(t.userId),
+		index('idx_sessions_expires').on(t.expiresAt)
 	]
 );

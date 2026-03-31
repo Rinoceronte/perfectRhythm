@@ -2,7 +2,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { err } from '$lib/server/utils/api-response';
 import { verifyMuxWebhook } from '$lib/server/services/video/mux';
 import { markVideoReady, markVideoError, markReviewCompositeDone } from '$lib/server/services/video';
-import { MUX_WEBHOOK_SECRET } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 /**
  * POST /api/v1/webhooks/mux
@@ -12,7 +12,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const rawBody = await request.text();
 	const signature = request.headers.get('mux-signature') ?? '';
 
-	if (!verifyMuxWebhook(rawBody, signature, MUX_WEBHOOK_SECRET)) {
+	if (!verifyMuxWebhook(rawBody, signature, env.MUX_WEBHOOK_SECRET ?? '')) {
 		return err('UNAUTHORIZED', 'Invalid webhook signature', 401);
 	}
 
