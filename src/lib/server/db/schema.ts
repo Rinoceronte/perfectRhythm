@@ -81,6 +81,15 @@ export const coachStudents = pgTable(
 	(t) => [unique('coach_students_coach_student_unique').on(t.coachId, t.studentId)]
 );
 
+export const coachNotes = pgTable('coach_notes', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	coachStudentId: uuid('coach_student_id')
+		.notNull()
+		.references(() => coachStudents.id, { onDelete: 'cascade' }),
+	content: text('content').notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull()
+});
+
 export const skillCategories = pgTable('skill_categories', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	name: text('name').notNull().unique(),
@@ -167,9 +176,6 @@ export const videoReviews = pgTable('video_reviews', {
 
 export const events = pgTable('events', {
 	id: uuid('id').primaryKey().defaultRandom(),
-	coachId: uuid('coach_id')
-		.notNull()
-		.references(() => users.id),
 	name: text('name').notNull(),
 	location: text('location').notNull(),
 	city: text('city').notNull(),
@@ -180,9 +186,28 @@ export const events = pgTable('events', {
 	startDate: text('start_date').notNull(),
 	endDate: text('end_date').notNull(),
 	isRecurring: boolean('is_recurring').notNull().default(false),
+	isLocal: boolean('is_local').notNull().default(false),
 	externalEventId: text('external_event_id'),
 	createdAt: timestamp('created_at').defaultNow().notNull()
 });
+
+export const coachEvents = pgTable(
+	'coach_events',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		coachId: uuid('coach_id')
+			.notNull()
+			.references(() => users.id),
+		eventId: uuid('event_id')
+			.notNull()
+			.references(() => events.id),
+		createdAt: timestamp('created_at').defaultNow().notNull()
+	},
+	(t) => [
+		unique('coach_events_coach_event_unique').on(t.coachId, t.eventId),
+		index('idx_coach_events_coach').on(t.coachId)
+	]
+);
 
 export const availabilityBlocks = pgTable('availability_blocks', {
 	id: uuid('id').primaryKey().defaultRandom(),
@@ -240,7 +265,9 @@ export const bookingRequests = pgTable(
 		status: text('status').notNull().default('pending'),
 		requestedAt: timestamp('requested_at').defaultNow().notNull(),
 		respondedAt: timestamp('responded_at'),
-		notes: text('notes')
+		notes: text('notes'),
+		studentNotesBefore: text('student_notes_before'),
+		studentNotesAfter: text('student_notes_after')
 	},
 	(t) => [
 		index('idx_bookings_coach').on(t.coachId, t.status),

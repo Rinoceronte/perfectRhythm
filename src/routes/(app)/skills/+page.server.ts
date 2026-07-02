@@ -51,6 +51,13 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
 	if (!isCoach && !isStudent) error(403, 'Access denied');
 
+	// Get the student ID for back navigation
+	const relRow = await db
+		.select({ studentId: coachStudents.studentId })
+		.from(coachStudents)
+		.where(eq(coachStudents.id, resolvedCoachStudentId))
+		.limit(1);
+
 	const [skills, categories, definitions] = await Promise.all([
 		getStudentSkills(resolvedCoachStudentId),
 		getCategories(),
@@ -62,6 +69,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		categories,
 		definitions,
 		coachStudentId: resolvedCoachStudentId,
+		studentId: relRow[0]?.studentId ?? null,
 		isCoach,
 		hasRelationship: true
 	};

@@ -209,6 +209,48 @@
 		return myBookings.find((b) => b.slotId === slotId && b.status !== 'cancelled');
 	}
 
+	// Lesson notes state
+	let viewingBookingId = $state<string | null>(null);
+	let notesBefore = $state('');
+	let notesAfter = $state('');
+	let savingNotes = $state(false);
+
+	function openLessonNotes(booking: BookingRequest) {
+		viewingBookingId = booking.id;
+		notesBefore = booking.studentNotesBefore ?? '';
+		notesAfter = booking.studentNotesAfter ?? '';
+	}
+
+	async function saveLessonNotes() {
+		if (!viewingBookingId) return;
+		savingNotes = true;
+		const res = await fetch(`/api/v1/schedule/bookings/${viewingBookingId}/notes`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				studentNotesBefore: notesBefore,
+				studentNotesAfter: notesAfter
+			})
+		});
+		const json = await res.json();
+		savingNotes = false;
+
+		if (json.data) {
+			myBookings = myBookings.map((b) =>
+				b.id === viewingBookingId
+					? { ...b, studentNotesBefore: notesBefore || null, studentNotesAfter: notesAfter || null }
+					: b
+			) as BookingRequest[];
+			viewingBookingId = null;
+		}
+	}
+
+	function handleNotesKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+			saveLessonNotes();
+		}
+	}
+
 	const statusColors: Record<string, string> = {
 		pending: 'bg-amber-100 text-amber-700',
 		confirmed: 'bg-green-100 text-green-700',
@@ -317,6 +359,11 @@
 								>
 								{#if booking.status !== 'cancelled'}
 									<button
+										onclick={() => openLessonNotes(booking)}
+										class="text-xs text-indigo-600 hover:underline"
+										>Notes</button
+									>
+									<button
 										onclick={() => handleCancel(booking.id)}
 										class="text-xs text-red-500 hover:underline"
 										>Cancel</button
@@ -416,6 +463,64 @@
 					class="flex-1 rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
 				>
 					Confirm booking
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Lesson notes modal -->
+{#if viewingBookingId}
+	{@const booking = myBookings.find((b) => b.id === viewingBookingId)}
+	<div
+		class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+		role="dialog"
+		aria-modal="true"
+		onclick={(e) => { if (e.target === e.currentTarget && !savingNotes) viewingBookingId = null; }}
+	>
+		<div class="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl">
+			<h3 class="mb-4 text-base font-semibold text-slate-800">Lesson notes</h3>
+
+			<div class="space-y-4">
+				<div>
+					<label class="mb-1 block text-xs font-medium text-slate-600">Before — what I want to work on</label>
+					<textarea
+						bind:value={notesBefore}
+						onkeydown={handleNotesKeydown}
+						placeholder="Goals, questions, things to focus on..."
+						rows={3}
+						maxlength={2000}
+						class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none resize-none"
+					></textarea>
+				</div>
+
+				<div>
+					<label class="mb-1 block text-xs font-medium text-slate-600">After — what I learned</label>
+					<textarea
+						bind:value={notesAfter}
+						onkeydown={handleNotesKeydown}
+						placeholder="Key takeaways, drills to practice, things to remember..."
+						rows={3}
+						maxlength={2000}
+						class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none resize-none"
+					></textarea>
+				</div>
+			</div>
+
+			<div class="mt-4 flex gap-3">
+				<button
+					onclick={() => (viewingBookingId = null)}
+					disabled={savingNotes}
+					class="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+				>
+					Cancel
+				</button>
+				<button
+					onclick={saveLessonNotes}
+					disabled={savingNotes}
+					class="flex-1 rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+				>
+					{savingNotes ? 'Saving...' : 'Save'}
 				</button>
 			</div>
 		</div>

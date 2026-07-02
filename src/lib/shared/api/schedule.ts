@@ -7,7 +7,8 @@ import type {
 	BookingInterest,
 	EventInterest,
 	InvisibleBlock,
-	BlockWithSlots
+	BlockWithSlots,
+	CoachBookSlotResult
 } from '$lib/shared/types';
 import type {
 	CreateEventInput,
@@ -18,7 +19,8 @@ import type {
 	RegisterInterestInput,
 	RegisterEventInterestInput,
 	RespondToBookingInput,
-	CreateInvisibleBlockInput
+	CreateInvisibleBlockInput,
+	CoachBookSlotInput
 } from '$lib/shared/validation/schedule';
 
 // ---- Events ----
@@ -131,6 +133,11 @@ export async function fetchSlotsForStudent(
 
 // ---- Booking ----
 
+export async function fetchBookings(): Promise<ApiResponse<BookingRequest[]>> {
+	const res = await fetch('/api/v1/schedule/bookings');
+	return res.json();
+}
+
 export async function registerInterest(
 	input: RegisterInterestInput
 ): Promise<ApiResponse<BookingInterest>> {
@@ -168,6 +175,15 @@ export async function cancelEventInterest(
 ): Promise<ApiResponse<{ deleted: boolean }>> {
 	const params = new URLSearchParams({ eventId, coachId });
 	const res = await fetch(`/api/v1/schedule/event-interest?${params}`, { method: 'DELETE' });
+	return res.json();
+}
+
+export async function coachBookSlot(input: CoachBookSlotInput): Promise<ApiResponse<CoachBookSlotResult>> {
+	const res = await fetch('/api/v1/schedule/bookings', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(input)
+	});
 	return res.json();
 }
 

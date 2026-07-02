@@ -6,7 +6,7 @@ import {
 	getInvisibleBlocksForCoach
 } from '$lib/server/services/schedule';
 import { db } from '$lib/server/db';
-import { coachStudents, users, events } from '$lib/server/db/schema';
+import { coachStudents, users, events, coachEvents } from '$lib/server/db/schema';
 import { eq, gte } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -47,7 +47,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const upcomingEvents = await db
 		.select({
 			id: events.id,
-			coachId: events.coachId,
+			coachId: coachEvents.coachId,
 			name: events.name,
 			location: events.location,
 			city: events.city,
@@ -55,7 +55,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			startDate: events.startDate,
 			endDate: events.endDate
 		})
-		.from(events)
+		.from(coachEvents)
+		.innerJoin(events, eq(coachEvents.eventId, events.id))
 		.where(gte(events.endDate, today));
 
 	return {

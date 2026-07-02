@@ -13,6 +13,57 @@
 		const e = new Date(endIso);
 		return `${format(s, 'EEE, MMM d')} · ${format(s, 'h:mm a')} – ${format(e, 'h:mm a')}`;
 	}
+
+	// Student lesson detail popup
+	interface StudentLesson {
+		id: string;
+		coachName: string;
+		startTime: string;
+		endTime: string;
+		status: string;
+		studentNotesBefore: string | null;
+		studentNotesAfter: string | null;
+	}
+
+	let viewingLesson = $state<StudentLesson | null>(null);
+	let notesBefore = $state('');
+	let notesAfter = $state('');
+	let savingNotes = $state(false);
+
+	let lessonIsPast = $derived(
+		viewingLesson ? new Date(viewingLesson.endTime) < new Date() : false
+	);
+
+	function openLesson(lesson: StudentLesson) {
+		viewingLesson = lesson;
+		notesBefore = lesson.studentNotesBefore ?? '';
+		notesAfter = lesson.studentNotesAfter ?? '';
+	}
+
+	async function saveLessonNotes() {
+		if (!viewingLesson) return;
+		savingNotes = true;
+		const res = await fetch(`/api/v1/schedule/bookings/${viewingLesson.id}/notes`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				studentNotesBefore: notesBefore,
+				studentNotesAfter: notesAfter
+			})
+		});
+		const json = await res.json();
+		savingNotes = false;
+
+		if (json.data) {
+			viewingLesson.studentNotesBefore = notesBefore || null;
+			viewingLesson.studentNotesAfter = notesAfter || null;
+			viewingLesson = null;
+		}
+	}
+
+	function handleNotesKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveLessonNotes();
+	}
 </script>
 
 <svelte:head>
@@ -140,19 +191,63 @@
 				<ul class="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
 					{#each data.upcomingLessons as lesson}
 						<li>
-							<a href="/schedule" class="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 transition-colors">
+							<button
+								onclick={() => openLesson(lesson)}
+								class="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-zinc-50 transition-colors"
+							>
 								<div>
 									<p class="text-sm font-medium text-zinc-900">{lesson.coachName}</p>
 									<p class="text-sm text-zinc-500">{formatTimeRange(lesson.startTime, lesson.endTime)}</p>
 								</div>
-								<span
-									class="rounded-full px-2 py-0.5 text-xs font-medium {lesson.status === 'confirmed'
-										? 'bg-green-50 text-green-700'
-										: 'bg-amber-50 text-amber-700'}"
-								>
-									{lesson.status}
-								</span>
-							</a>
+								<div class="flex items-center gap-2">
+									{#if lesson.studentNotesBefore || lesson.studentNotesAfter}
+										<svg class="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+										</svg>
+									{/if}
+									<span
+										class="rounded-full px-2 py-0.5 text-xs font-medium {lesson.status === 'confirmed'
+											? 'bg-green-50 text-green-700'
+											: 'bg-amber-50 text-amber-700'}"
+									>
+										{lesson.status}
+									</span>
+								</div>
+							</button>
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
+
+		<!-- Past lessons -->
+		{#if data.pastLessons.length > 0}
+			<section class="space-y-3">
+				<h2 class="text-lg font-medium text-zinc-900">Past Lessons</h2>
+				<ul class="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
+					{#each data.pastLessons as lesson}
+						<li>
+							<button
+								onclick={() => openLesson(lesson)}
+								class="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-zinc-50 transition-colors"
+							>
+								<div>
+									<p class="text-sm font-medium text-zinc-900">{lesson.coachName}</p>
+									<p class="text-sm text-zinc-500">{formatTimeRange(lesson.startTime, lesson.endTime)}</p>
+								</div>
+								<div class="flex items-center gap-2">
+									{#if lesson.studentNotesAfter}
+										<svg class="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+										</svg>
+									{:else}
+										<span class="text-xs text-zinc-400">Add notes</span>
+									{/if}
+									<span class="rounded-full px-2 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-500">
+										completed
+									</span>
+								</div>
+							</button>
 						</li>
 					{/each}
 				</ul>
@@ -252,3 +347,95 @@
 		{/if}
 	{/if}
 </div>
+
+<!-- Student lesson detail popup -->
+{#if viewingLesson}
+	<div
+		class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+		role="dialog"
+		aria-modal="true"
+		onclick={(e) => { if (e.target === e.currentTarget && !savingNotes) viewingLesson = null; }}
+	>
+		<div class="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl">
+			<div class="mb-4">
+				<h3 class="text-base font-semibold text-zinc-900">{viewingLesson.coachName}</h3>
+				<p class="text-sm text-zinc-500">{formatTimeRange(viewingLesson.startTime, viewingLesson.endTime)}</p>
+				<span
+					class="mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium {lessonIsPast
+						? 'bg-zinc-100 text-zinc-500'
+						: viewingLesson.status === 'confirmed'
+							? 'bg-green-50 text-green-700'
+							: 'bg-amber-50 text-amber-700'}"
+				>
+					{lessonIsPast ? 'completed' : viewingLesson.status}
+				</span>
+			</div>
+
+			<div class="space-y-4">
+				{#if lessonIsPast}
+					<!-- Past lesson: before notes read-only, after notes editable -->
+					{#if notesBefore}
+						<div class="rounded-lg bg-zinc-50 px-3 py-2">
+							<p class="text-xs font-medium text-zinc-500 mb-1">Before — what I wanted to work on</p>
+							<p class="whitespace-pre-wrap text-sm text-zinc-700">{notesBefore}</p>
+						</div>
+					{/if}
+
+					<div>
+						<label class="mb-1 block text-xs font-medium text-zinc-600">After — what I learned</label>
+						<textarea
+							bind:value={notesAfter}
+							onkeydown={handleNotesKeydown}
+							placeholder="Key takeaways, drills to practice, things to remember..."
+							rows={4}
+							maxlength={2000}
+							class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none resize-none"
+						></textarea>
+					</div>
+				{:else}
+					<!-- Upcoming lesson: both editable -->
+					<div>
+						<label class="mb-1 block text-xs font-medium text-zinc-600">Before — what I want to work on</label>
+						<textarea
+							bind:value={notesBefore}
+							onkeydown={handleNotesKeydown}
+							placeholder="Goals, questions, things to focus on..."
+							rows={3}
+							maxlength={2000}
+							class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none resize-none"
+						></textarea>
+					</div>
+
+					<div>
+						<label class="mb-1 block text-xs font-medium text-zinc-600">After — what I learned</label>
+						<textarea
+							bind:value={notesAfter}
+							onkeydown={handleNotesKeydown}
+							placeholder="Key takeaways, drills to practice, things to remember..."
+							rows={3}
+							maxlength={2000}
+							class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none resize-none"
+						></textarea>
+					</div>
+				{/if}
+			</div>
+
+			<div class="mt-4 flex gap-3">
+				<button
+					onclick={() => (viewingLesson = null)}
+					disabled={savingNotes}
+					class="flex-1 rounded-lg border border-zinc-200 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50 disabled:opacity-50"
+				>
+					Close
+				</button>
+				<button
+					onclick={saveLessonNotes}
+					disabled={savingNotes}
+					class="flex-1 rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+				>
+					{savingNotes ? 'Saving...' : 'Save notes'}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}

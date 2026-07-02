@@ -3,9 +3,10 @@
 	import type { AvailabilityBlock, Event, BookingWithDetails, InvisibleBlock } from '$lib/shared/types';
 	import CoachScheduleBuilder from '$lib/components/schedule/CoachScheduleBuilder.svelte';
 	import BookingCalendar from '$lib/components/schedule/BookingCalendar.svelte';
-import InvisibleBlockManager from '$lib/components/schedule/InvisibleBlockManager.svelte';
+	import InvisibleBlockManager from '$lib/components/schedule/InvisibleBlockManager.svelte';
 	import StudentBookingView from '$lib/components/schedule/StudentBookingView.svelte';
 	import MultiSelect from '$lib/components/ui/MultiSelect.svelte';
+	import { fetchBookings } from '$lib/shared/api/schedule';
 
 	let { data }: { data: PageData } = $props();
 
@@ -23,6 +24,16 @@ import InvisibleBlockManager from '$lib/components/schedule/InvisibleBlockManage
 	const urlTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
 	let coachTab = $state<CoachTab>(validTabs.includes(urlTab as CoachTab) ? (urlTab as CoachTab) : 'schedule');
 	let showInvisibleBlocks = $state(false);
+
+	async function switchCoachTab(tab: CoachTab) {
+		coachTab = tab;
+		if (tab === 'bookings') {
+			const res = await fetchBookings();
+			if (!res.error) {
+				bookings = res.data as BookingWithDetails[];
+			}
+		}
+	}
 
 	// ---- Student view ----
 	type StudentStep = 'browse' | 'coach-events' | 'slots';
@@ -169,7 +180,7 @@ import InvisibleBlockManager from '$lib/components/schedule/InvisibleBlockManage
 			<div class="flex flex-1 gap-1 rounded-xl bg-slate-100 p-1 text-sm">
 				{#each [{ id: 'schedule', label: 'Schedule' }, { id: 'bookings', label: 'Bookings' }] as tab}
 					<button
-						onclick={() => (coachTab = tab.id as CoachTab)}
+						onclick={() => switchCoachTab(tab.id as CoachTab)}
 						class="flex-1 rounded-lg py-2 font-medium transition-colors {coachTab === tab.id
 							? 'bg-white shadow text-slate-800'
 							: 'text-slate-500 hover:text-slate-700'}"

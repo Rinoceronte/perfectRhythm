@@ -1,12 +1,14 @@
 <script lang="ts">
-	import type { AvailabilityBlock, BookingWithDetails } from '$lib/shared/types';
+	import type { AvailabilityBlock, BookingWithDetails, LessonSlot } from '$lib/shared/types';
 	import {
 		createAvailabilityBlock,
 		updateAvailabilityBlock,
 		deleteAvailabilityBlock,
 		publishAvailabilityBlock,
+		fetchSlotsForBlock,
 		respondToBooking,
-		cancelBooking
+		cancelBooking,
+		coachBookSlot
 	} from '$lib/shared/api/schedule';
 
 	interface Props {
@@ -46,6 +48,26 @@
 	let coachNotes = $state<string | null>(null);
 	let loadingNotes = $state(false);
 
+	// Available slots for published blocks (for coach-initiated booking)
+	let availableSlots = $state<LessonSlot[]>([]);
+	let loadingSlots = $state(false);
+
+	// Coach book-for-student popup state
+	let bookingSlot = $state<LessonSlot | null>(null);
+	let bookStudentEmail = $state('');
+	let bookStudentName = $state('');
+	let bookNotes = $state('');
+	let bookingInProgress = $state(false);
+	let bookError = $state('');
+	let bookResult = $state<{ studentCreated: boolean } | null>(null);
+	let emailLookupTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
+	let emailMatch = $state<{ displayName: string } | null>(null);
+	let lookingUpEmail = $state(false);
+	let nameLookupTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
+	let nameResults = $state<Array<{ email: string; displayName: string }>>([]);
+	let showNameDropdown = $state(false);
+	let lookingUpName = $state(false);
+
 	// --- Derived: blocks visible on this day (including overnight overflow from previous day) ---
 
 	interface DayBlockEntry {
@@ -83,6 +105,121 @@
 		const slotDate = new Date(b.slot.startTime).toISOString().slice(0, 10);
 		return slotDate === date && (b.status === 'confirmed' || b.status === 'pending');
 	}));
+
+	// Fetch available slots when published blocks change
+	let publishedBlockIds = $derived(
+		dayBlocks.filter((e) => e.block.isPublished && !e.isOverflow).map((e) => e.block.id).join(',')
+	);
+
+	$effect(() => {
+		// Re-run when publishedBlockIds changes
+		const blockIds = publishedBlockIds;
+		if (!blockIds) { availableSlots = []; return; }
+
+		loadingSlots = true;
+		const ids = blockIds.split(',');
+		Promise.all(ids.map((id) => fetchSlotsForBlock(id))).then((results) => {
+			const bookedSlotIds = new Set(dayBookings.map((b) => b.slotId));
+			const allSlots = results.flatMap((r) => r.data ?? []);
+			availableSlots = allSlots.filter((s) => s.status === 'available' && !bookedSlotIds.has(s.id));
+			loadingSlots = false;
+		});
+	});
+
+	function openBookForStudent(slot: LessonSlot) {
+		bookingSlot = slot;
+		bookStudentEmail = '';
+		bookStudentName = '';
+		bookNotes = '';
+		bookError = '';
+		bookResult = null;
+		emailMatch = null;
+		nameResults = [];
+		showNameDropdown = false;
+	}
+
+	function handleEmailInput() {
+		emailMatch = null;
+		nameResults = [];
+		showNameDropdown = false;
+		if (emailLookupTimeout) clearTimeout(emailLookupTimeout);
+		const email = bookStudentEmail.trim();
+		if (!email || !email.includes('@')) return;
+
+		lookingUpEmail = true;
+		emailLookupTimeout = setTimeout(async () => {
+			try {
+				const res = await fetch(`/api/v1/users/lookup?email=${encodeURIComponent(email)}`);
+				const json = await res.json();
+				if (json.data) {
+					emailMatch = { displayName: json.data.displayName };
+					bookStudentName = json.data.displayName;
+				}
+			} catch { /* ignore */ }
+			lookingUpEmail = false;
+		}, 400);
+	}
+
+	function handleNameInput() {
+		// If already matched via email, don't search by name
+		if (emailMatch) return;
+		nameResults = [];
+		showNameDropdown = false;
+		if (nameLookupTimeout) clearTimeout(nameLookupTimeout);
+		const name = bookStudentName.trim();
+		if (name.length < 2) return;
+
+		lookingUpName = true;
+		nameLookupTimeout = setTimeout(async () => {
+			try {
+				const res = await fetch(`/api/v1/users/lookup?name=${encodeURIComponent(name)}`);
+				const json = await res.json();
+				if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+					nameResults = json.data;
+					showNameDropdown = true;
+				}
+			} catch { /* ignore */ }
+			lookingUpName = false;
+		}, 400);
+	}
+
+	function selectNameResult(result: { email: string; displayName: string }) {
+		bookStudentEmail = result.email;
+		bookStudentName = result.displayName;
+		emailMatch = { displayName: result.displayName };
+		nameResults = [];
+		showNameDropdown = false;
+	}
+
+	async function handleCoachBook() {
+		if (!bookingSlot || !bookStudentEmail) return;
+		bookingInProgress = true;
+		bookError = '';
+		bookResult = null;
+
+		const res = await coachBookSlot({
+			slotId: bookingSlot.id,
+			studentEmail: bookStudentEmail,
+			studentDisplayName: bookStudentName || undefined,
+			notes: bookNotes || undefined
+		});
+
+		bookingInProgress = false;
+
+		if (res.error) {
+			bookError = res.error.message;
+			return;
+		}
+
+		bookResult = { studentCreated: res.data.studentCreated };
+		// Add booking to list
+		onBookingsChanged?.([...bookings, res.data.booking]);
+		// Remove slot from available list
+		availableSlots = availableSlots.filter((s) => s.id !== bookingSlot!.id);
+
+		// Auto-close after brief delay to show result
+		setTimeout(() => { bookingSlot = null; bookResult = null; }, 1500);
+	}
 
 	// --- Positioning helpers ---
 
@@ -460,6 +597,25 @@
 				</button>
 			{/each}
 
+			<!-- Available slots (for coach-initiated booking) -->
+			{#each availableSlots as slot (slot.id)}
+				{@const slotStart = new Date(slot.startTime)}
+				{@const slotEnd = new Date(slot.endTime)}
+				{@const slotStartMin = slotStart.getHours() * 60 + slotStart.getMinutes()}
+				{@const slotEndMin = slotEnd.getHours() * 60 + slotEnd.getMinutes()}
+				{@const slotH = (((slotEndMin - slotStartMin) / (TOTAL_HOURS * 60)) * TOTAL_HOURS * HOUR_HEIGHT)}
+				<button
+					data-block
+					onclick={(e) => { e.stopPropagation(); openBookForStudent(slot); }}
+					class="absolute left-14 right-4 rounded border border-dashed border-slate-300 bg-slate-50/60 px-1.5 py-0.5 text-[11px] leading-tight text-left cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/60 transition-colors"
+					style="top: {minutesToY(slotStartMin)}px; height: {Math.max(slotH, 18)}px"
+				>
+					<span class="text-slate-400 truncate block">
+						{formatTime12(slotStartMin)} — open
+					</span>
+				</button>
+			{/each}
+
 			<!-- Create drag preview -->
 			{#if dragging && dragMode === 'create' && dragEndMin - dragStartMin >= SNAP_MINUTES}
 				<div
@@ -584,6 +740,128 @@
 	</div>
 {/if}
 
+<!-- Coach book-for-student popup -->
+{#if bookingSlot}
+	{@const slotStart = new Date(bookingSlot.startTime)}
+	{@const slotEnd = new Date(bookingSlot.endTime)}
+	<div
+		class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+		role="dialog"
+		aria-modal="true"
+		onclick={(e) => { if (e.target === e.currentTarget && !bookingInProgress) { bookingSlot = null; } }}
+	>
+		<div class="w-full max-w-sm overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
+			<div class="p-5 space-y-4">
+				{#if bookResult}
+					<div class="text-center py-4">
+						<div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+							<svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+							</svg>
+						</div>
+						<p class="font-semibold text-zinc-900">Lesson booked</p>
+						{#if bookResult.studentCreated}
+							<p class="text-sm text-zinc-500 mt-1">New account created — student will need to set a password</p>
+						{/if}
+					</div>
+				{:else}
+					<div>
+						<h3 class="font-semibold text-zinc-900">Book for a student</h3>
+						<p class="text-sm text-zinc-500">
+							{formatTime12(slotStart.getHours() * 60 + slotStart.getMinutes())}
+							&ndash;
+							{formatTime12(slotEnd.getHours() * 60 + slotEnd.getMinutes())}
+						</p>
+					</div>
+
+					{#if bookError}
+						<p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{bookError}</p>
+					{/if}
+
+					<div>
+						<label class="mb-1 block text-xs font-medium text-zinc-600">Student email *</label>
+						<input
+							type="email"
+							bind:value={bookStudentEmail}
+							oninput={handleEmailInput}
+							placeholder="student@example.com"
+							class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none
+								{emailMatch ? 'border-green-300 focus:border-green-400' : 'border-zinc-200 focus:border-indigo-400'}"
+						/>
+						{#if lookingUpEmail}
+							<p class="mt-1 text-xs text-zinc-400">Checking...</p>
+						{:else if emailMatch}
+							<p class="mt-1 text-xs text-green-600">Found: {emailMatch.displayName}</p>
+						{:else}
+							<p class="mt-1 text-xs text-zinc-400">Matches existing account or creates a new one</p>
+						{/if}
+					</div>
+
+					<div class="relative">
+						<label class="mb-1 block text-xs font-medium text-zinc-600">Name {emailMatch ? '' : '(for new accounts)'}</label>
+						<input
+							type="text"
+							bind:value={bookStudentName}
+							oninput={handleNameInput}
+							onfocus={() => { if (nameResults.length > 0 && !emailMatch) showNameDropdown = true; }}
+							onblur={() => setTimeout(() => (showNameDropdown = false), 200)}
+							placeholder="e.g. Alex Rivera"
+							disabled={!!emailMatch}
+							autocomplete="off"
+							class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none disabled:bg-zinc-50 disabled:text-zinc-500"
+						/>
+						{#if emailMatch}
+							<button
+								onclick={() => { emailMatch = null; bookStudentEmail = ''; bookStudentName = ''; }}
+								class="absolute right-2 top-7 text-xs text-zinc-400 hover:text-zinc-600"
+							>clear</button>
+						{/if}
+						{#if showNameDropdown && nameResults.length > 0}
+							<div class="absolute z-20 mt-1 w-full rounded-lg border border-zinc-200 bg-white shadow-lg max-h-36 overflow-y-auto">
+								{#each nameResults as result (result.email)}
+									<button
+										type="button"
+										onmousedown={() => selectNameResult(result)}
+										class="w-full px-3 py-2 text-left hover:bg-zinc-50 border-b border-zinc-100 last:border-0"
+									>
+										<p class="text-sm font-medium text-zinc-800">{result.displayName}</p>
+										<p class="text-xs text-zinc-500">{result.email}</p>
+									</button>
+								{/each}
+							</div>
+						{/if}
+					</div>
+
+					<div>
+						<label class="mb-1 block text-xs font-medium text-zinc-600">Note</label>
+						<input
+							type="text"
+							bind:value={bookNotes}
+							placeholder="Optional note"
+							class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
+						/>
+					</div>
+
+					<div class="flex gap-2 pt-1">
+						<button
+							onclick={handleCoachBook}
+							disabled={bookingInProgress || !bookStudentEmail}
+							class="flex-1 rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+						>
+							{bookingInProgress ? 'Booking...' : 'Book lesson'}
+						</button>
+						<button
+							onclick={() => (bookingSlot = null)}
+							disabled={bookingInProgress}
+							class="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50 disabled:opacity-50"
+						>Cancel</button>
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
+
 <!-- Booking detail popup -->
 {#if viewingBooking}
 	<div
@@ -629,8 +907,15 @@
 
 				{#if viewingBooking.notes}
 					<div class="rounded-lg bg-zinc-50 px-3 py-2">
-						<p class="text-xs text-zinc-500 mb-1">Note from student</p>
+						<p class="text-xs text-zinc-500 mb-1">Booking note</p>
 						<p class="text-sm text-zinc-700 italic">"{viewingBooking.notes}"</p>
+					</div>
+				{/if}
+
+				{#if viewingBooking.studentNotesBefore}
+					<div class="rounded-lg bg-indigo-50 px-3 py-2">
+						<p class="text-xs text-indigo-500 mb-1">Student's prep notes</p>
+						<p class="text-sm text-indigo-800">{viewingBooking.studentNotesBefore}</p>
 					</div>
 				{/if}
 

@@ -1,16 +1,19 @@
 // Scheduling and booking business logic
+import crypto from 'crypto';
 import { db } from '$lib/server/db';
 import {
 	events,
+	coachEvents,
 	availabilityBlocks,
 	lessonSlots,
 	bookingRequests,
 	bookingInterests,
 	eventInterests,
 	invisibleBlocks,
-	users
+	users,
+	coachStudents
 } from '$lib/server/db/schema';
-import { eq, and, gte, lte, lt, inArray } from 'drizzle-orm';
+import { eq, and, gte, lte, lt, inArray, ilike } from 'drizzle-orm';
 import { parseBlockTime } from '$lib/server/utils/date';
 import type {
 	Event,
@@ -21,19 +24,35 @@ import type {
 	EventInterest,
 	InvisibleBlock,
 	BookingWithDetails,
-	BlockWithSlots
+	BlockWithSlots,
+	CoachBookSlotResult
 } from '$lib/shared/types';
 import type {
 	CreateEventInput,
 	UpdateEventInput,
 	CreateAvailabilityBlockInput,
-	UpdateAvailabilityBlockInput
+	UpdateAvailabilityBlockInput,
+	CoachBookSlotInput
 } from '$lib/shared/validation/schedule';
 
 // ---- Events ----
 
 export async function getEventsForCoach(coachId: string): Promise<Event[]> {
-	const rows = await db.select().from(events).where(eq(events.coachId, coachId));
+	const rows = await db
+		.select({ event: events })
+		.from(coachEvents)
+		.innerJoin(events, eq(coachEvents.eventId, events.id))
+		.where(eq(coachEvents.coachId, coachId));
+	return rows.map((r) => r.event as Event);
+}
+
+export async function searchEvents(query: string): Promise<Event[]> {
+	const rows = await db
+		.select()
+		.from(events)
+		.where(ilike(events.name, `%${query}%`))
+		.orderBy(events.name)
+		.limit(20);
 	return rows as Event[];
 }
 
@@ -43,24 +62,71 @@ export async function getEventById(id: string): Promise<Event | null> {
 }
 
 export async function createEvent(coachId: string, input: CreateEventInput): Promise<Event> {
-	const [row] = await db
-		.insert(events)
-		.values({
-			coachId,
-			name: input.name,
-			location: input.location,
-			city: input.city,
-			stateOrRegion: input.stateOrRegion,
-			country: input.country ?? 'US',
-			lat: input.lat ?? null,
-			lng: input.lng ?? null,
-			startDate: input.startDate,
-			endDate: input.endDate,
-			isRecurring: input.isRecurring ?? false,
-			externalEventId: input.externalEventId ?? null
-		})
-		.returning();
-	return row as Event;
+	// Check if this coach is already linked to a matching event
+	const alreadyLinked = await db
+		.select({ eventId: coachEvents.eventId })
+		.from(coachEvents)
+		.innerJoin(events, eq(coachEvents.eventId, events.id))
+		.where(
+			and(
+				eq(coachEvents.coachId, coachId),
+				ilike(events.name, input.name),
+				lte(events.startDate, input.endDate),
+				gte(events.endDate, input.startDate)
+			)
+		)
+		.limit(1);
+
+	if (alreadyLinked.length > 0) {
+		throw new Error('DUPLICATE_EVENT');
+	}
+
+	// Check if a matching event already exists (created by another coach)
+	const existing = await db
+		.select()
+		.from(events)
+		.where(
+			and(
+				ilike(events.name, input.name),
+				lte(events.startDate, input.endDate),
+				gte(events.endDate, input.startDate)
+			)
+		)
+		.limit(1);
+
+	let event: Event;
+
+	if (existing.length > 0) {
+		// Link coach to existing event
+		event = existing[0] as Event;
+	} else {
+		// Create new event
+		const [row] = await db
+			.insert(events)
+			.values({
+				name: input.name,
+				location: input.location,
+				city: input.city,
+				stateOrRegion: input.stateOrRegion,
+				country: input.country ?? 'US',
+				lat: input.lat ?? null,
+				lng: input.lng ?? null,
+				startDate: input.startDate,
+				endDate: input.endDate,
+				isRecurring: input.isRecurring ?? false,
+				externalEventId: input.externalEventId ?? null
+			})
+			.returning();
+		event = row as Event;
+	}
+
+	// Link coach to event
+	await db
+		.insert(coachEvents)
+		.values({ coachId, eventId: event.id })
+		.onConflictDoNothing();
+
+	return event;
 }
 
 export async function updateEvent(
@@ -87,8 +153,11 @@ export async function updateEvent(
 	return (row as Event) ?? null;
 }
 
-export async function deleteEvent(id: string): Promise<boolean> {
-	const result = await db.delete(events).where(eq(events.id, id)).returning({ id: events.id });
+export async function unlinkCoachFromEvent(coachId: string, eventId: string): Promise<boolean> {
+	const result = await db
+		.delete(coachEvents)
+		.where(and(eq(coachEvents.coachId, coachId), eq(coachEvents.eventId, eventId)))
+		.returning({ id: coachEvents.id });
 	return result.length > 0;
 }
 
@@ -324,6 +393,9 @@ export async function getSlotsForStudent(
 		if (isPriority && block.priorityBookingOpenAt && block.priorityBookingOpenAt <= now) {
 			accessibleBlockIds.push(block.id);
 		} else if (block.bookingOpenAt && block.bookingOpenAt <= now) {
+			accessibleBlockIds.push(block.id);
+		} else if (!block.bookingOpenAt && !block.priorityBookingOpenAt) {
+			// No booking window set — published block is immediately open to all
 			accessibleBlockIds.push(block.id);
 		}
 	}
@@ -664,11 +736,11 @@ export async function verifyCoachOwnsBlock(
 	return rows.length > 0;
 }
 
-export async function verifyCoachOwnsEvent(coachId: string, eventId: string): Promise<boolean> {
+export async function verifyCoachLinkedToEvent(coachId: string, eventId: string): Promise<boolean> {
 	const rows = await db
-		.select({ id: events.id })
-		.from(events)
-		.where(and(eq(events.id, eventId), eq(events.coachId, coachId)))
+		.select({ id: coachEvents.id })
+		.from(coachEvents)
+		.where(and(eq(coachEvents.eventId, eventId), eq(coachEvents.coachId, coachId)))
 		.limit(1);
 	return rows.length > 0;
 }
@@ -699,6 +771,103 @@ export async function verifyStudentOwnsBooking(
 		)
 		.limit(1);
 	return rows.length > 0;
+}
+
+// ---- Coach-initiated Booking ----
+
+/**
+ * Find a student by email, or create a stub account (no password).
+ * Returns the user row and whether it was newly created.
+ */
+export async function findOrCreateStudent(
+	email: string,
+	displayName?: string
+): Promise<{ id: string; displayName: string; avatarUrl: string | null; created: boolean }> {
+	const existing = await db
+		.select({ id: users.id, displayName: users.displayName, avatarUrl: users.avatarUrl })
+		.from(users)
+		.where(eq(users.email, email.toLowerCase()))
+		.limit(1);
+
+	if (existing.length > 0) {
+		return { ...existing[0], created: false };
+	}
+
+	const [row] = await db
+		.insert(users)
+		.values({
+			id: crypto.randomUUID(),
+			email: email.toLowerCase(),
+			displayName: displayName || email.split('@')[0],
+			role: 'student'
+		})
+		.returning({ id: users.id, displayName: users.displayName, avatarUrl: users.avatarUrl });
+
+	return { ...row, created: true };
+}
+
+/**
+ * Coach books a slot for a student by email.
+ * Finds or creates the student, ensures a coach_students link,
+ * and creates the booking.
+ */
+export async function coachBookSlot(
+	coachId: string,
+	input: CoachBookSlotInput
+): Promise<CoachBookSlotResult> {
+	// Verify the coach owns this slot
+	const slotCoachId = await getCoachIdForSlot(input.slotId);
+	if (slotCoachId !== coachId) {
+		throw new Error('SLOT_NOT_OWNED');
+	}
+
+	// Check slot is available
+	const slotRows = await db
+		.select()
+		.from(lessonSlots)
+		.where(eq(lessonSlots.id, input.slotId))
+		.limit(1);
+
+	if (slotRows.length === 0) throw new Error('SLOT_NOT_FOUND');
+	if (slotRows[0].status !== 'available') throw new Error('SLOT_NOT_AVAILABLE');
+
+	// Find or create student
+	const student = await findOrCreateStudent(input.studentEmail, input.studentDisplayName);
+
+	// Ensure coach_students relationship exists
+	await db
+		.insert(coachStudents)
+		.values({ coachId, studentId: student.id })
+		.onConflictDoNothing();
+
+	// Book the slot
+	const now = new Date();
+	await db
+		.update(lessonSlots)
+		.set({ status: 'confirmed', studentId: student.id, bookedAt: now })
+		.where(eq(lessonSlots.id, input.slotId));
+
+	const [booking] = await db
+		.insert(bookingRequests)
+		.values({
+			slotId: input.slotId,
+			studentId: student.id,
+			coachId,
+			status: 'confirmed',
+			respondedAt: now,
+			notes: input.notes ?? null
+		})
+		.returning();
+
+	return {
+		booking: {
+			...(booking as BookingRequest),
+			slot: slotRows[0] as LessonSlot,
+			studentDisplayName: student.displayName,
+			studentAvatarUrl: student.avatarUrl
+		},
+		studentCreated: student.created
+	};
 }
 
 /** Get the coachId for a slot (via block) */
@@ -738,6 +907,7 @@ export async function verifySlotBookable(
 
 	if (isPriority && priorityOpen) return { ok: true };
 	if (generalOpen) return { ok: true };
+	if (!block.bookingOpenAt && !block.priorityBookingOpenAt) return { ok: true };
 
 	return { ok: false, reason: 'Booking not yet open' };
 }

@@ -5,7 +5,7 @@
 		StudentSkillWithDetails
 	} from '$lib/shared/types';
 	import { assignEffectivePriorities } from '$lib/shared/types';
-	import { assignStudentSkill, triggerAiSuggest } from '$lib/shared/api/skills';
+	import { assignStudentSkill } from '$lib/shared/api/skills';
 	import SkillCard from './SkillCard.svelte';
 	import SkillAddModal from './SkillAddModal.svelte';
 
@@ -30,19 +30,34 @@
 	let skills = $state<StudentSkillWithDetails[]>(initialSkills);
 	let categories = $state<SkillCategory[]>(initialCategories);
 	let definitions = $state<SkillDefinitionWithCategory[]>(initialDefinitions);
-	let activeCategoryFilter = $state<string | null>(filterCategory ?? null);
+	let expandedCategory = $state<string | null>(filterCategory ?? null);
 	let expandedSkillId = $state<string | null>(null);
 
 	let usedCategories = $derived([...new Set(skills.map((s) => s.categoryName))].sort());
 
-	let displayedSkills = $derived(
-		activeCategoryFilter
-			? skills.filter((s) => s.categoryName === activeCategoryFilter)
-			: skills
-	);
+	// Group skills by category
+	let skillsByCategory = $derived.by(() => {
+		const map = new Map<string, StudentSkillWithDetails[]>();
+		for (const s of skills) {
+			const list = map.get(s.categoryName) ?? [];
+			list.push(s);
+			map.set(s.categoryName, list);
+		}
+		return map;
+	});
+
+	function categoryAvg(categoryName: string): number {
+		const catSkills = skillsByCategory.get(categoryName) ?? [];
+		if (catSkills.length === 0) return 0;
+		return Math.round((catSkills.reduce((sum, s) => sum + s.currentScore, 0) / catSkills.length) * 10) / 10;
+	}
+
+	function toggleCategory(name: string) {
+		expandedCategory = expandedCategory === name ? null : name;
+		expandedSkillId = null;
+	}
+
 	let showAddSearch = $state(false);
-	let aiLoading = $state(false);
-	let aiMessage = $state('');
 
 	// Add search state
 	let skillSearch = $state('');
@@ -72,17 +87,8 @@
 		)
 	);
 
-	// Compute effective priorities across ALL skills (not just filtered)
+	// Compute effective priorities across ALL skills
 	let effectivePriorities = $derived(assignEffectivePriorities(skills));
-
-	// Sorted by effective priority (lower number = focus first)
-	let sortedSkills = $derived(
-		[...displayedSkills].sort((a, b) => {
-			const pa = effectivePriorities.get(a.id)?.value ?? 999;
-			const pb = effectivePriorities.get(b.id)?.value ?? 999;
-			return pa - pb;
-		})
-	);
 
 	function handleUpdated(updated: StudentSkillWithDetails) {
 		skills = skills.map((s) => (s.id === updated.id ? updated : s));
@@ -132,57 +138,14 @@
 		showAddSearch = false;
 	}
 
-	async function handleAiSuggest() {
-		aiLoading = true;
-		aiMessage = '';
-		const res = await triggerAiSuggest(coachStudentId);
-		aiLoading = false;
-
-		if (res.error) {
-			aiMessage = `Error: ${res.error.message}`;
-			return;
-		}
-
-		aiMessage = `AI updated ${res.data!.applied} skill${res.data!.applied !== 1 ? 's' : ''}.`;
-		window.location.reload();
-	}
 </script>
 
 <div class="space-y-4">
 	<!-- Toolbar -->
 	<div class="flex flex-wrap items-center justify-between gap-3">
-		<h2 class="text-xl font-bold text-slate-900">
-			{#if activeCategoryFilter}
-				{activeCategoryFilter}
-			{:else}
-				Skill Map
-			{/if}
-		</h2>
+		<h2 class="text-xl font-bold text-slate-900">Skill Map</h2>
 
 		<div class="flex flex-wrap items-center gap-2">
-			{#if isCoach}
-				<button
-					onclick={handleAiSuggest}
-					disabled={aiLoading}
-					class="flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-50"
-				>
-					<svg
-						class="h-4 w-4 {aiLoading ? 'animate-spin' : ''}"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						viewBox="0 0 24 24"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347a3.999 3.999 0 01-1.025 2.754L12 21l-1.364-1.6a3.999 3.999 0 01-1.025-2.754l-.347-.347z"
-						/>
-					</svg>
-					{aiLoading ? 'Thinking...' : 'AI Suggest'}
-				</button>
-			{/if}
-
 			<button
 				onclick={() => {
 					showAddSearch = !showAddSearch;
@@ -197,35 +160,6 @@
 			</button>
 		</div>
 	</div>
-
-	<!-- Category filter pills — only categories the student has skills in -->
-	{#if usedCategories.length > 1}
-		<div class="flex flex-wrap gap-2">
-			<button
-				onclick={() => (activeCategoryFilter = null)}
-				class="rounded-full px-3 py-1 text-sm font-medium transition-colors {activeCategoryFilter === null
-					? 'bg-zinc-900 text-white'
-					: 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}"
-			>
-				All
-			</button>
-			{#each usedCategories as cat}
-				<button
-					onclick={() => (activeCategoryFilter = activeCategoryFilter === cat ? null : cat)}
-					class="rounded-full px-3 py-1 text-sm font-medium transition-colors {activeCategoryFilter === cat
-						? 'bg-zinc-900 text-white'
-						: 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}"
-				>
-					{cat}
-				</button>
-			{/each}
-		</div>
-	{/if}
-
-	<!-- AI feedback -->
-	{#if aiMessage}
-		<div class="rounded-lg bg-purple-50 px-4 py-2 text-sm text-purple-700">{aiMessage}</div>
-	{/if}
 
 	<!-- Add skill search -->
 	{#if showAddSearch}
@@ -310,17 +244,56 @@
 			</p>
 		</div>
 	{:else}
-		<div class="space-y-3">
-			{#each sortedSkills as skill (skill.id)}
-				<SkillCard
-					{skill}
-					{isCoach}
-					expanded={expandedSkillId === skill.id}
-					onToggle={() => (expandedSkillId = expandedSkillId === skill.id ? null : skill.id)}
-					priority={effectivePriorities.get(skill.id)}
-					onUpdated={handleUpdated}
-					onDeleted={handleDeleted}
-				/>
+		<div class="rounded-lg border border-zinc-200 bg-white">
+			{#each usedCategories as cat, catIdx (cat)}
+				{@const catSkills = (skillsByCategory.get(cat) ?? []).sort((a, b) => {
+					const pa = effectivePriorities.get(a.id)?.value ?? 999;
+					const pb = effectivePriorities.get(b.id)?.value ?? 999;
+					return pa - pb;
+				})}
+				{@const avg = categoryAvg(cat)}
+				<div>
+					<button
+						onclick={() => toggleCategory(cat)}
+						class="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-50 transition-colors {catIdx > 0 ? 'border-t border-zinc-100' : ''}"
+					>
+						<svg
+							class="h-4 w-4 shrink-0 text-zinc-400 transition-transform {expandedCategory === cat ? 'rotate-90' : ''}"
+							fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+						>
+							<path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+						</svg>
+						<div class="min-w-0 flex-1">
+							<div class="flex items-center justify-between">
+								<span class="text-sm font-medium text-zinc-900">{cat}</span>
+								<span class="text-xs tabular-nums text-zinc-500">{avg} / 10</span>
+							</div>
+							<div class="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+								<div
+									class="h-full rounded-full transition-all {avg >= 8 ? 'bg-emerald-500' : avg >= 6 ? 'bg-blue-500' : avg >= 4 ? 'bg-amber-500' : 'bg-red-500'}"
+									style="width: {avg * 10}%"
+								></div>
+							</div>
+						</div>
+					</button>
+
+					{#if expandedCategory === cat}
+						<div class="pl-8 pr-4 py-1">
+							{#each catSkills as skill, i (skill.id)}
+								<SkillCard
+									{skill}
+									{isCoach}
+									expanded={expandedSkillId === skill.id}
+									onToggle={() => (expandedSkillId = expandedSkillId === skill.id ? null : skill.id)}
+									priority={effectivePriorities.get(skill.id)}
+									onUpdated={handleUpdated}
+									onDeleted={handleDeleted}
+									odd={i % 2 === 1}
+								/>
+							{/each}
+						</div>
+					{/if}
+				</div>
 			{/each}
 		</div>
 	{/if}

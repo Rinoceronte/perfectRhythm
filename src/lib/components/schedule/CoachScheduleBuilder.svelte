@@ -32,12 +32,59 @@
 		country: 'US',
 		startDate: '',
 		endDate: '',
-		isRecurring: false
+		isRecurring: false,
+		isLocal: false
 	});
 
+	// Event search autocomplete
+	let searchResults = $state<Event[]>([]);
+	let showDropdown = $state(false);
+	let searchTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
+
+	function handleNameInput() {
+		if (eventForm.isLocal || eventForm.name.length < 2) {
+			searchResults = [];
+			showDropdown = false;
+			return;
+		}
+		if (searchTimeout) clearTimeout(searchTimeout);
+		searchTimeout = setTimeout(async () => {
+			const res = await fetch(`/api/v1/events?search=${encodeURIComponent(eventForm.name)}`);
+			const json = await res.json();
+			if (json.data && json.data.length > 0) {
+				// Deduplicate by name+city (same event created by different coaches)
+				const seen = new Set<string>();
+				searchResults = json.data.filter((e: Event) => {
+					const key = `${e.name}|${e.city}`;
+					if (seen.has(key)) return false;
+					seen.add(key);
+					return true;
+				});
+				showDropdown = true;
+			} else {
+				searchResults = [];
+				showDropdown = false;
+			}
+		}, 250);
+	}
+
+	function selectSearchResult(ev: Event) {
+		eventForm.name = ev.name;
+		eventForm.location = ev.location;
+		eventForm.city = ev.city;
+		eventForm.stateOrRegion = ev.stateOrRegion;
+		eventForm.country = ev.country;
+		eventForm.startDate = ev.startDate;
+		eventForm.endDate = ev.endDate;
+		showDropdown = false;
+		searchResults = [];
+	}
+
 	function resetEventForm() {
-		eventForm = { name: '', location: '', city: '', stateOrRegion: '', country: 'US', startDate: '', endDate: '', isRecurring: false };
+		eventForm = { name: '', location: '', city: '', stateOrRegion: '', country: 'US', startDate: '', endDate: '', isRecurring: false, isLocal: false };
 		eventError = '';
+		searchResults = [];
+		showDropdown = false;
 	}
 
 	async function handleCreateEvent() {
@@ -128,14 +175,32 @@
 					<p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{eventError}</p>
 				{/if}
 
-				<div>
-					<label class="mb-1 block text-xs font-medium text-slate-600">Event name *</label>
+				<div class="relative">
+					<label class="mb-1 block text-xs font-medium text-slate-600">{eventForm.isLocal ? 'Name *' : 'Event name *'}</label>
 					<input
 						type="text"
 						bind:value={eventForm.name}
-						placeholder="e.g. SwingDiego 2026"
+						oninput={handleNameInput}
+						onfocus={() => { if (searchResults.length > 0) showDropdown = true; }}
+						onblur={() => setTimeout(() => (showDropdown = false), 200)}
+						placeholder={eventForm.isLocal ? 'e.g. Tuesday Lessons' : 'e.g. SwingDiego 2026'}
+						autocomplete="off"
 						class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
 					/>
+					{#if showDropdown && searchResults.length > 0}
+						<div class="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg max-h-48 overflow-y-auto">
+							{#each searchResults as result (result.id)}
+								<button
+									type="button"
+									onmousedown={() => selectSearchResult(result)}
+									class="w-full px-3 py-2 text-left hover:bg-slate-50 border-b border-slate-100 last:border-0"
+								>
+									<p class="text-sm font-medium text-slate-800">{result.name}</p>
+									<p class="text-xs text-slate-500">{result.city}, {result.stateOrRegion} · {result.startDate} – {result.endDate}</p>
+								</button>
+							{/each}
+						</div>
+					{/if}
 				</div>
 
 				<div>
@@ -186,10 +251,16 @@
 					</div>
 				</div>
 
-				<label class="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-					<input type="checkbox" bind:checked={eventForm.isRecurring} class="rounded" />
-					Recurring event
-				</label>
+				<div class="flex gap-4">
+					<label class="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+						<input type="checkbox" bind:checked={eventForm.isLocal} class="rounded" />
+						Local day
+					</label>
+					<label class="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+						<input type="checkbox" bind:checked={eventForm.isRecurring} class="rounded" />
+						Recurring
+					</label>
+				</div>
 
 				<button
 					onclick={handleCreateEvent}
@@ -216,7 +287,14 @@
 					>
 						<div class="flex items-center justify-between">
 							<div>
-								<p class="font-semibold text-slate-800">{event.name}</p>
+								<div class="flex items-center gap-2">
+									<p class="font-semibold text-slate-800">{event.name}</p>
+									{#if event.isLocal}
+										<span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">Local</span>
+									{:else}
+										<span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">Event</span>
+									{/if}
+								</div>
 								<p class="text-sm text-slate-500">
 									{event.city}, {event.stateOrRegion} · {format(parseISO(event.startDate), 'MMM d')}–{format(parseISO(event.endDate), 'MMM d')}
 								</p>

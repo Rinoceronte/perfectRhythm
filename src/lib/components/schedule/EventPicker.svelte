@@ -21,7 +21,8 @@
 		country: 'US',
 		startDate: '',
 		endDate: '',
-		isRecurring: false
+		isRecurring: false,
+		isLocal: false
 	});
 
 	async function handleCreate() {
@@ -48,7 +49,8 @@
 				country: 'US',
 				startDate: '',
 				endDate: '',
-				isRecurring: false
+				isRecurring: false,
+				isLocal: false
 			};
 		}
 

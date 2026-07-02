@@ -1,63 +1,8 @@
 <script lang="ts">
-	import { formatDistanceToNow } from 'date-fns';
-	import { updateStudentSkill } from '$lib/shared/api/skills';
+	import { formatDistanceToNow, format } from 'date-fns';
+	import SkillMap from '$lib/components/skill/SkillMap.svelte';
 
 	let { data } = $props();
-
-	let categories = $state(data.categories.map(cat => ({
-		...cat,
-		skills: cat.skills.map(s => ({ ...s }))
-	})));
-
-	let expandedCategory = $state<string | null>(null);
-	let editingSkillId = $state<string | null>(null);
-	let savingSkillId = $state<string | null>(null);
-
-	function toggle(name: string) {
-		expandedCategory = expandedCategory === name ? null : name;
-		editingSkillId = null;
-	}
-
-	function toggleEdit(skillId: string) {
-		editingSkillId = editingSkillId === skillId ? null : skillId;
-	}
-
-	async function saveSkill(catIndex: number, skillIndex: number, field: string, value: number) {
-		const skill = categories[catIndex].skills[skillIndex];
-		if ((skill as Record<string, unknown>)[field] === value) return;
-
-		savingSkillId = skill.id;
-		const result = await updateStudentSkill(skill.id, { [field]: value });
-		savingSkillId = null;
-
-		if (result.error) return;
-
-		// Update skill value and reassign for reactivity
-		categories[catIndex].skills[skillIndex] = {
-			...skill,
-			[field]: value
-		};
-		categories[catIndex] = {
-			...categories[catIndex],
-			avgScore: Math.round(
-				(categories[catIndex].skills.reduce((sum, s) => sum + s.currentScore, 0) / categories[catIndex].skills.length) * 10
-			) / 10
-		};
-	}
-
-	function scoreColor(score: number): string {
-		if (score >= 8) return 'bg-emerald-500';
-		if (score >= 6) return 'bg-blue-500';
-		if (score >= 4) return 'bg-amber-500';
-		return 'bg-red-500';
-	}
-
-	function scoreTextColor(score: number): string {
-		if (score >= 8) return 'text-emerald-700';
-		if (score >= 6) return 'text-blue-700';
-		if (score >= 4) return 'text-amber-700';
-		return 'text-red-700';
-	}
 
 	function formatLevel(level: string): string {
 		if (level === 'allstar') return 'All-Star';
@@ -65,6 +10,89 @@
 	}
 
 	let hasRoles = $derived(data.student.leaderLevel || data.student.followerLevel);
+
+	// Notes
+	interface Note {
+		id: string;
+		coachStudentId: string;
+		content: string;
+		createdAt: string | Date;
+	}
+
+	let notes = $state<Note[]>(data.notes as Note[]);
+	let notesExpanded = $state(false);
+	let newNote = $state('');
+	let savingNote = $state(false);
+	let editingNoteId = $state<string | null>(null);
+	let editingContent = $state('');
+	let savingEdit = $state(false);
+
+	function startEdit(note: Note) {
+		editingNoteId = note.id;
+		editingContent = note.content;
+	}
+
+	function cancelEdit() {
+		editingNoteId = null;
+		editingContent = '';
+	}
+
+	async function saveEdit() {
+		if (!editingNoteId || !editingContent.trim()) return;
+		const noteId = editingNoteId;
+		const original = notes.find((n) => n.id === noteId);
+		if (original && editingContent.trim() === original.content) {
+			cancelEdit();
+			return;
+		}
+
+		savingEdit = true;
+		const res = await fetch(`/api/v1/students/${data.student.id}/notes/${noteId}`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ content: editingContent.trim() })
+		});
+		const json = await res.json();
+		savingEdit = false;
+
+		if (json.data) {
+			notes = notes.map((n) => (n.id === noteId ? json.data : n));
+			cancelEdit();
+		}
+	}
+
+	function handleEditKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+			saveEdit();
+		} else if (e.key === 'Escape') {
+			cancelEdit();
+		}
+	}
+
+	async function addNote() {
+		const content = newNote.trim();
+		if (!content) return;
+		savingNote = true;
+
+		const res = await fetch(`/api/v1/students/${data.student.id}/notes`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ content })
+		});
+		const json = await res.json();
+		savingNote = false;
+
+		if (json.data) {
+			notes = [json.data, ...notes];
+			newNote = '';
+		}
+	}
+
+	function handleNoteKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+			addNote();
+		}
+	}
 </script>
 
 <svelte:head>
@@ -133,148 +161,92 @@
 	{/if}
 
 
-	<!-- Skills by category -->
-	{#if categories.length > 0}
-		<div class="space-y-3">
-			<div class="flex items-center justify-between">
-				<h2 class="text-lg font-medium text-zinc-900">Skills</h2>
-				<a
-					href="/skills?coachStudentId={data.student.coachStudentId}"
-					class="text-sm text-zinc-500 hover:text-zinc-900"
-				>
-					Manage
-				</a>
-			</div>
+	<!-- Notes -->
+	<div class="space-y-3">
+		<h2 class="text-lg font-medium text-zinc-900">Notes</h2>
 
-			<div class="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
-				{#each categories as category, catIndex}
-					<div>
-						<!-- Category row -->
-						<button
-							onclick={() => toggle(category.name)}
-							class="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-50 transition-colors"
-						>
-							<svg
-								class="h-4 w-4 shrink-0 text-zinc-400 transition-transform {expandedCategory === category.name ? 'rotate-90' : ''}"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="2"
-								stroke="currentColor"
-							>
-								<path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-							</svg>
-							<div class="min-w-0 flex-1">
-								<div class="flex items-center justify-between">
-									<span class="text-sm font-medium text-zinc-900">{category.name}</span>
-									<span class="text-xs tabular-nums text-zinc-500">{category.avgScore} / 10</span>
-								</div>
-								<div class="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-									<div
-										class="h-full rounded-full {scoreColor(category.avgScore)} transition-all"
-										style="width: {category.avgScore * 10}%"
-									></div>
-								</div>
-							</div>
-						</button>
-
-						<!-- Expanded skills -->
-						{#if expandedCategory === category.name}
-							<div class="border-t border-zinc-100 bg-zinc-50/50 px-4 py-2">
-								<div class="space-y-1">
-									{#each category.skills as skill, skillIndex (skill.id)}
-										<div>
-											<!-- Skill summary row -->
-											<button
-												onclick={() => toggleEdit(skill.id)}
-												class="flex w-full items-center justify-between py-2 text-left hover:bg-zinc-100/50 -mx-2 px-2 rounded transition-colors"
-											>
-												<div class="flex items-center gap-2 min-w-0">
-													<span class="text-sm text-zinc-700">{skill.name}</span>
-													{#if skill.coachLocked}
-														<svg class="h-3.5 w-3.5 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-															<path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-														</svg>
-													{/if}
-													{#if savingSkillId === skill.id}
-														<span class="text-xs text-zinc-400">saving...</span>
-													{/if}
-												</div>
-												<div class="flex items-center gap-1.5 shrink-0">
-													<div class="h-2 w-16 overflow-hidden rounded-full bg-zinc-200">
-														<div
-															class="h-full rounded-full {scoreColor(skill.currentScore)}"
-															style="width: {skill.currentScore * 10}%"
-														></div>
-													</div>
-													<span class="text-xs tabular-nums font-medium {scoreTextColor(skill.currentScore)} w-4 text-right">{skill.currentScore}</span>
-												</div>
-											</button>
-
-											<!-- Inline editor -->
-											{#if editingSkillId === skill.id}
-												<div class="pb-3 pt-1 pl-2 space-y-3">
-													<div class="space-y-1">
-														<div class="flex items-center justify-between">
-															<span class="text-xs text-zinc-500">Ability</span>
-															<span class="text-xs tabular-nums font-medium {scoreTextColor(skill.currentScore)}">{skill.currentScore}</span>
-														</div>
-														<input
-															type="range"
-															min="1"
-															max="10"
-															value={skill.currentScore}
-															onchange={(e) => saveSkill(catIndex, skillIndex, 'currentScore', parseInt(e.currentTarget.value))}
-															class="w-full accent-blue-600 h-2"
-														/>
-													</div>
-													<div class="space-y-1">
-														<div class="flex items-center justify-between">
-															<span class="text-xs text-zinc-500">Effort to improve</span>
-															<span class="text-xs tabular-nums font-medium text-zinc-600">{skill.effortToImprove}</span>
-														</div>
-														<input
-															type="range"
-															min="1"
-															max="10"
-															value={skill.effortToImprove}
-															onchange={(e) => saveSkill(catIndex, skillIndex, 'effortToImprove', parseInt(e.currentTarget.value))}
-															class="w-full accent-orange-500 h-2"
-														/>
-													</div>
-													<div class="space-y-1">
-														<div class="flex items-center justify-between">
-															<span class="text-xs text-zinc-500">Improvement benefit</span>
-															<span class="text-xs tabular-nums font-medium text-zinc-600">{skill.improvementBenefit}</span>
-														</div>
-														<input
-															type="range"
-															min="1"
-															max="10"
-															value={skill.improvementBenefit}
-															onchange={(e) => saveSkill(catIndex, skillIndex, 'improvementBenefit', parseInt(e.currentTarget.value))}
-															class="w-full accent-emerald-500 h-2"
-														/>
-													</div>
-												</div>
-											{/if}
-										</div>
-									{/each}
-								</div>
-							</div>
-						{/if}
-					</div>
-				{/each}
-			</div>
-		</div>
-	{:else}
-		<div class="rounded-lg border border-dashed border-zinc-300 py-12 text-center">
-			<p class="text-sm text-zinc-500">No skills tracked yet.</p>
-			<a
-				href="/skills?coachStudentId={data.student.coachStudentId}"
-				class="mt-2 inline-block text-sm font-medium text-zinc-900 hover:underline"
+		<!-- Add note (always visible) -->
+		<div class="flex gap-2">
+			<textarea
+				bind:value={newNote}
+				onkeydown={handleNoteKeydown}
+				placeholder="Add a note..."
+				rows={2}
+				maxlength={5000}
+				class="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300 resize-none"
+			></textarea>
+			<button
+				onclick={addNote}
+				disabled={savingNote || !newNote.trim()}
+				class="self-end rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-40"
 			>
-				Set up skill map
-			</a>
+				{savingNote ? '...' : 'Add'}
+			</button>
 		</div>
-	{/if}
+
+		<!-- Collapsible history -->
+		{#if notes.length > 0}
+			<button
+				onclick={() => (notesExpanded = !notesExpanded)}
+				class="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-700"
+			>
+				<svg
+					class="h-4 w-4 transition-transform {notesExpanded ? 'rotate-90' : ''}"
+					fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+				</svg>
+				{notes.length} previous note{notes.length !== 1 ? 's' : ''}
+			</button>
+
+			{#if notesExpanded}
+				<div class="space-y-2">
+					{#each notes as note (note.id)}
+						<div class="rounded-lg border border-zinc-100 bg-white px-4 py-3">
+							{#if editingNoteId === note.id}
+								<textarea
+									bind:value={editingContent}
+									onkeydown={handleEditKeydown}
+									onblur={saveEdit}
+									rows={3}
+									maxlength={5000}
+									class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300 resize-none"
+								></textarea>
+								<div class="mt-2 flex items-center gap-2">
+									<button
+										onclick={saveEdit}
+										disabled={savingEdit}
+										class="text-xs font-medium text-zinc-700 hover:text-zinc-900"
+									>{savingEdit ? 'Saving...' : 'Save'}</button>
+									<button
+										onmousedown={cancelEdit}
+										class="text-xs text-zinc-400 hover:text-zinc-600"
+									>Cancel</button>
+								</div>
+							{:else}
+								<button
+									onclick={() => startEdit(note)}
+									class="w-full text-left"
+								>
+									<p class="whitespace-pre-wrap text-sm text-zinc-700">{note.content}</p>
+								</button>
+								<p class="mt-2 text-xs text-zinc-400">
+									{format(new Date(note.createdAt), 'MMM d, yyyy · h:mm a')}
+								</p>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			{/if}
+		{/if}
+	</div>
+
+	<!-- Skill Map -->
+	<SkillMap
+		skills={data.skills}
+		categories={data.skillCategories}
+		definitions={data.skillDefinitions}
+		coachStudentId={data.student.coachStudentId}
+		isCoach={true}
+	/>
 </div>

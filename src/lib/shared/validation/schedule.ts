@@ -13,6 +13,7 @@ export const CreateEventSchema = z.object({
 	startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
 	endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
 	isRecurring: z.boolean().default(false),
+	isLocal: z.boolean().default(false),
 	externalEventId: z.string().nullable().optional()
 });
 
@@ -76,3 +77,14 @@ export const CreateInvisibleBlockSchema = z.object({
 });
 
 export type CreateInvisibleBlockInput = z.infer<typeof CreateInvisibleBlockSchema>;
+
+// ---- Coach-initiated Booking ----
+
+export const CoachBookSlotSchema = z.object({
+	slotId: z.string().uuid(),
+	studentEmail: z.string().email(),
+	studentDisplayName: z.string().min(1).max(200).optional(),
+	notes: z.string().max(500).optional()
+});
+
+export type CoachBookSlotInput = z.infer<typeof CoachBookSlotSchema>;

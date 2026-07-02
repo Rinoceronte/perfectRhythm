@@ -140,7 +140,6 @@ export interface SkillSuggestion {
 
 export interface Event {
 	id: string;
-	coachId: string;
 	name: string;
 	location: string;
 	city: string;
@@ -151,6 +150,7 @@ export interface Event {
 	startDate: string; // YYYY-MM-DD
 	endDate: string; // YYYY-MM-DD
 	isRecurring: boolean;
+	isLocal: boolean;
 	externalEventId: string | null;
 	createdAt: Date;
 }
@@ -195,6 +195,8 @@ export interface BookingRequest {
 	requestedAt: Date;
 	respondedAt: Date | null;
 	notes: string | null;
+	studentNotesBefore: string | null;
+	studentNotesAfter: string | null;
 }
 
 export interface InvisibleBlock {
@@ -235,6 +237,12 @@ export interface BookingWithDetails extends BookingRequest {
 export interface BlockWithSlots extends AvailabilityBlock {
 	slots: LessonSlot[];
 	event: Event | null;
+}
+
+/** Result of a coach-initiated booking (find-or-create student flow) */
+export interface CoachBookSlotResult {
+	booking: BookingWithDetails;
+	studentCreated: boolean;
 }
 
 // ---- Video ----

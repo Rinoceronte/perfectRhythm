@@ -23,14 +23,15 @@ export const load: PageServerLoad = async ({ locals: { safeGetSession } }) => {
 			displayName: users.displayName,
 			email: users.email,
 			avatarUrl: users.avatarUrl,
-			lastLessonAt: sql<string | null>`
-				(SELECT MAX(${lessonSlots.startTime})
+			nextLessonAt: sql<string | null>`
+				(SELECT MIN(${lessonSlots.startTime})
 				 FROM ${bookingRequests}
 				 INNER JOIN ${lessonSlots} ON ${bookingRequests.slotId} = ${lessonSlots.id}
 				 WHERE ${bookingRequests.studentId} = ${coachStudents.studentId}
 				   AND ${bookingRequests.coachId} = ${coachStudents.coachId}
-				   AND ${bookingRequests.status} = 'confirmed')
-			`.as('last_lesson_at')
+				   AND ${bookingRequests.status} = 'confirmed'
+				   AND ${lessonSlots.startTime} >= NOW())
+			`.as('next_lesson_at')
 		})
 		.from(coachStudents)
 		.innerJoin(users, eq(coachStudents.studentId, users.id))
@@ -39,7 +40,7 @@ export const load: PageServerLoad = async ({ locals: { safeGetSession } }) => {
 
 	return {
 		students: students.map((s) => {
-			const lastLesson = s.lastLessonAt ? new Date(s.lastLessonAt) : null;
+			const nextLesson = s.nextLessonAt ? new Date(s.nextLessonAt) : null;
 			return {
 				coachStudentId: s.coachStudentId,
 				studentId: s.studentId,
@@ -47,8 +48,8 @@ export const load: PageServerLoad = async ({ locals: { safeGetSession } }) => {
 				email: s.email,
 				avatarUrl: s.avatarUrl,
 				since: s.createdAt!.toISOString(),
-				lastLessonAt: lastLesson?.toISOString() ?? null,
-				isActive: lastLesson != null && lastLesson >= sixMonthsAgo
+				nextLessonAt: nextLesson?.toISOString() ?? null,
+				isActive: nextLesson != null || s.createdAt! >= sixMonthsAgo
 			};
 		})
 	};

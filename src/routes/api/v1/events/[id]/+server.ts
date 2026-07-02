@@ -3,14 +3,14 @@ import { ok, err } from '$lib/server/utils/api-response';
 import {
 	getEventById,
 	updateEvent,
-	deleteEvent,
-	verifyCoachOwnsEvent
+	unlinkCoachFromEvent,
+	verifyCoachLinkedToEvent
 } from '$lib/server/services/schedule';
 import { UpdateEventSchema } from '$lib/shared/validation/schedule';
 
 /**
  * PATCH /api/v1/events/:id
- * Update an event. Coach must own it.
+ * Update an event. Coach must be linked to it.
  */
 export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	const { session, user } = await locals.safeGetSession();
@@ -22,8 +22,8 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	const { id } = params;
 	if (!id) return err('BAD_REQUEST', 'Event ID required');
 
-	const owns = await verifyCoachOwnsEvent(user.id, id);
-	if (!owns) return err('FORBIDDEN', 'Access denied', 403);
+	const linked = await verifyCoachLinkedToEvent(user.id, id);
+	if (!linked) return err('FORBIDDEN', 'Access denied', 403);
 
 	const body = await request.json().catch(() => null);
 	const parsed = UpdateEventSchema.safeParse(body);
@@ -37,7 +37,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 
 /**
  * DELETE /api/v1/events/:id
- * Delete an event. Coach must own it.
+ * Unlink the coach from this event.
  */
 export const DELETE: RequestHandler = async ({ params, locals }) => {
 	const { session, user } = await locals.safeGetSession();
@@ -49,10 +49,10 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	const { id } = params;
 	if (!id) return err('BAD_REQUEST', 'Event ID required');
 
-	const owns = await verifyCoachOwnsEvent(user.id, id);
-	if (!owns) return err('FORBIDDEN', 'Access denied', 403);
+	const linked = await verifyCoachLinkedToEvent(user.id, id);
+	if (!linked) return err('FORBIDDEN', 'Access denied', 403);
 
-	const deleted = await deleteEvent(id);
+	const deleted = await unlinkCoachFromEvent(user.id, id);
 	if (!deleted) return err('NOT_FOUND', 'Event not found', 404);
 
 	return ok({ deleted: true });

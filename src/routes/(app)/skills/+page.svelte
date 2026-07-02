@@ -13,6 +13,15 @@
 </svelte:head>
 
 <div class="mx-auto max-w-2xl px-4 py-6">
+	{#if data.isCoach && data.studentId}
+		<a
+			href="/students/{data.studentId}"
+			class="mb-4 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-700"
+		>
+			&larr; Back to student
+		</a>
+	{/if}
+
 	{#if !data.hasRelationship}
 		<div class="rounded-xl border-2 border-dashed border-slate-200 py-20 text-center">
 			<h2 class="text-lg font-semibold text-slate-700">No coach relationship yet</h2>

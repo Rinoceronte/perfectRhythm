@@ -135,6 +135,27 @@ export const load: PageServerLoad = async ({ locals: { safeGetSession } }) => {
 		.orderBy(lessonSlots.startTime)
 		.limit(5);
 
+	// My recent past lessons
+	const { lt } = await import('drizzle-orm');
+	const pastLessons = await db
+		.select({
+			booking: bookingRequests,
+			slot: lessonSlots,
+			coach: { displayName: users.displayName }
+		})
+		.from(bookingRequests)
+		.innerJoin(lessonSlots, eq(bookingRequests.slotId, lessonSlots.id))
+		.innerJoin(users, eq(bookingRequests.coachId, users.id))
+		.where(
+			and(
+				eq(bookingRequests.studentId, userId),
+				eq(bookingRequests.status, 'confirmed'),
+				lt(lessonSlots.endTime, now)
+			)
+		)
+		.orderBy(desc(lessonSlots.startTime))
+		.limit(10);
+
 	// My skills (across all coach relationships)
 	const myCoachRelationships = await db
 		.select({ id: coachStudents.id })
@@ -188,7 +209,18 @@ export const load: PageServerLoad = async ({ locals: { safeGetSession } }) => {
 			coachName: r.coach.displayName,
 			startTime: r.slot.startTime.toISOString(),
 			endTime: r.slot.endTime.toISOString(),
-			status: r.booking.status
+			status: r.booking.status,
+			studentNotesBefore: r.booking.studentNotesBefore,
+			studentNotesAfter: r.booking.studentNotesAfter
+		})),
+		pastLessons: pastLessons.map((r) => ({
+			id: r.booking.id,
+			coachName: r.coach.displayName,
+			startTime: r.slot.startTime.toISOString(),
+			endTime: r.slot.endTime.toISOString(),
+			status: r.booking.status,
+			studentNotesBefore: r.booking.studentNotesBefore,
+			studentNotesAfter: r.booking.studentNotesAfter
 		})),
 		skillsByCategory,
 		recentVideos: recentVideos.map((v) => ({

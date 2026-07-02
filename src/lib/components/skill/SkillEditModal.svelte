@@ -21,7 +21,6 @@
 			: (skill.studentPriority?.toString() ?? '')
 	);
 	let notes = $state(skill.notes ?? '');
-	let coachLocked = $state(skill.coachLocked);
 	let saving = $state(false);
 	let errorMsg = $state('');
 
@@ -36,7 +35,7 @@
 			effortToImprove,
 			improvementBenefit,
 			notes: notes.trim() || undefined,
-			...(isCoach && { coachLocked, coachPriority: parsedPriority }),
+			...(isCoach && { coachPriority: parsedPriority }),
 			...(!isCoach && { studentPriority: parsedPriority })
 		};
 
@@ -179,33 +178,6 @@
 					class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
 				></textarea>
 			</div>
-
-			<!-- Coach-only: lock toggle -->
-			{#if isCoach}
-				<label class="flex cursor-pointer items-center gap-3">
-					<div
-						class="relative h-6 w-11 rounded-full transition-colors {coachLocked
-							? 'bg-slate-700'
-							: 'bg-slate-200'}"
-					>
-						<input
-							type="checkbox"
-							bind:checked={coachLocked}
-							class="sr-only"
-							aria-label="Lock skill — prevent AI from overriding"
-						/>
-						<div
-							class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform {coachLocked
-								? 'translate-x-5'
-								: 'translate-x-0'}"
-						></div>
-					</div>
-					<div>
-						<span class="text-sm font-medium text-slate-700">Lock skill</span>
-						<p class="text-xs text-slate-500">Prevents AI from overriding these values</p>
-					</div>
-				</label>
-			{/if}
 
 			{#if errorMsg}
 				<p class="text-sm text-red-600">{errorMsg}</p>

@@ -10,9 +10,10 @@
 		priority?: { value: number; source: 'coach' | 'student' | 'system' };
 		onUpdated: (skill: StudentSkillWithDetails) => void;
 		onDeleted: (id: string) => void;
+		odd?: boolean;
 	}
 
-	let { skill, isCoach, expanded, onToggle, priority, onUpdated, onDeleted }: Props = $props();
+	let { skill, isCoach, expanded, onToggle, priority, onUpdated, onDeleted, odd = false }: Props = $props();
 
 	let saving = $state(false);
 	let deleting = $state(false);
@@ -67,68 +68,38 @@
 	}
 </script>
 
-<div
-	class="rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
-	class:opacity-50={deleting}
->
-	<!-- Summary row -->
-	<button
-		onclick={onToggle}
-		class="flex w-full items-start justify-between gap-3 p-4 text-left"
-	>
-		<div class="min-w-0 flex-1">
-			<div class="flex flex-wrap items-center gap-2">
-				<span class="truncate font-semibold text-slate-900">{skill.skillName}</span>
-
-				{#if skill.coachLocked}
-					<span
-						class="flex items-center gap-1 rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600"
-						title="Coach has locked this skill — AI won't override it"
-					>
-						<svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-						</svg>
-						Locked
-					</span>
-				{/if}
-
-				{#if !isCoach && skill.coachLocked}
-					<span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-						Coach reviewed
-					</span>
-				{/if}
-
-				<span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-					{skill.categoryName}
-				</span>
-			</div>
-
-			{#if !expanded && skill.notes}
-				<p class="mt-1 text-sm text-slate-500 line-clamp-1">{skill.notes}</p>
-			{/if}
-		</div>
-
-		<div class="flex shrink-0 items-center gap-3">
-			<span class="text-xs font-semibold tabular-nums {scoreColor(currentScore)}">{currentScore}</span>
-			<svg
-				class="h-4 w-4 text-slate-400 transition-transform {expanded ? 'rotate-180' : ''}"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				viewBox="0 0 24 24"
+<div class:opacity-50={deleting}>
+	<div class="-ml-8 -mr-4 {odd ? 'bg-zinc-100/60' : ''}">
+		<div class="pl-8 pr-4">
+			<!-- Summary row -->
+			<button
+				onclick={onToggle}
+				class="flex w-full items-center justify-between py-2 text-left hover:text-zinc-900 transition-colors"
 			>
-				<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-			</svg>
-		</div>
-	</button>
+				<div class="flex items-center gap-2 min-w-0">
+					<span class="text-sm text-zinc-700">{skill.skillName}</span>
+					{#if saving}
+						<span class="text-xs text-zinc-400">saving...</span>
+					{/if}
+				</div>
+				<div class="flex items-center gap-1.5 shrink-0">
+					<div class="h-2 w-16 overflow-hidden rounded-full bg-zinc-200">
+						<div
+							class="h-full rounded-full {currentScore >= 8 ? 'bg-emerald-500' : currentScore >= 6 ? 'bg-blue-500' : currentScore >= 4 ? 'bg-amber-500' : 'bg-red-500'}"
+							style="width: {currentScore * 10}%"
+						></div>
+					</div>
+					<span class="text-xs tabular-nums font-medium w-4 text-right {scoreColor(currentScore)}">{currentScore}</span>
+				</div>
+			</button>
 
-	<!-- Inline editor -->
-	{#if expanded}
-		<div class="border-t border-slate-100 px-4 pb-4 pt-3 space-y-4">
-			<div class="space-y-3">
+			<!-- Inline editor -->
+			{#if expanded}
+				<div class="pb-3 pt-1 pl-2 space-y-3">
+			<div class="space-y-2">
 				<div class="space-y-1">
 					<div class="flex items-center justify-between text-xs">
-						<span class="text-slate-500">Ability</span>
+						<span class="text-zinc-500">Ability</span>
 						<span class="font-semibold tabular-nums {scoreColor(currentScore)}">{currentScore}/10</span>
 					</div>
 					<input
@@ -143,8 +114,8 @@
 
 				<div class="space-y-1">
 					<div class="flex items-center justify-between text-xs">
-						<span class="text-slate-500">Effort to improve</span>
-						<span class="font-semibold tabular-nums text-slate-600">{effortToImprove}/10</span>
+						<span class="text-zinc-500">Effort to improve</span>
+						<span class="font-semibold tabular-nums text-zinc-600">{effortToImprove}/10</span>
 					</div>
 					<input
 						type="range"
@@ -158,8 +129,8 @@
 
 				<div class="space-y-1">
 					<div class="flex items-center justify-between text-xs">
-						<span class="text-slate-500">Improvement benefit</span>
-						<span class="font-semibold tabular-nums text-slate-600">{improvementBenefit}/10</span>
+						<span class="text-zinc-500">Improvement benefit</span>
+						<span class="font-semibold tabular-nums text-zinc-600">{improvementBenefit}/10</span>
 					</div>
 					<input
 						type="range"
@@ -172,27 +143,22 @@
 				</div>
 			</div>
 
-			<div>
-				<textarea
-					bind:value={notes}
-					onblur={saveNotes}
-					placeholder="Notes..."
-					rows={2}
-					maxlength={500}
-					class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
-				></textarea>
-			</div>
+			<textarea
+				bind:value={notes}
+				onblur={saveNotes}
+				placeholder="Notes..."
+				rows={2}
+				maxlength={500}
+				class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300"
+			></textarea>
 
 			<div class="flex items-center justify-between">
-				<div class="text-xs text-slate-400">
+				<div class="text-xs text-zinc-400">
 					{#if priority}
 						Priority #{priority.value}
 						{#if priority.source !== 'system'}
-							<span class="text-slate-300">· set by {priority.source === 'coach' ? 'coach' : 'you'}</span>
+							<span class="text-zinc-300">· set by {priority.source === 'coach' ? 'coach' : 'you'}</span>
 						{/if}
-					{/if}
-					{#if saving}
-						<span class="ml-2 text-slate-400">saving...</span>
 					{/if}
 				</div>
 
@@ -200,7 +166,7 @@
 					<button
 						onclick={handleDelete}
 						disabled={deleting}
-						class="rounded px-2 py-1 text-xs text-slate-400 hover:bg-red-50 hover:text-red-500"
+						class="rounded px-2 py-1 text-xs text-zinc-400 hover:bg-red-50 hover:text-red-500"
 					>
 						Delete
 					</button>
@@ -208,4 +174,6 @@
 			</div>
 		</div>
 	{/if}
+		</div>
+	</div>
 </div>

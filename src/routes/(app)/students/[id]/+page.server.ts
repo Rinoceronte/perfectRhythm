@@ -1,14 +1,9 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import {
-	users,
-	coachStudents,
-	studentSkills,
-	skillDefinitions,
-	skillCategories
-} from '$lib/server/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { users, coachStudents, coachNotes } from '$lib/server/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 import { error, redirect } from '@sveltejs/kit';
+import { getStudentSkills, getCategories, getDefinitions } from '$lib/server/services/skills';
 
 export const load: PageServerLoad = async ({ params, locals: { safeGetSession } }) => {
 	const { user } = await safeGetSession();
@@ -41,67 +36,16 @@ export const load: PageServerLoad = async ({ params, locals: { safeGetSession } 
 
 	const student = relationship[0];
 
-	// Get skills grouped by category
-	const skills = await db
-		.select({
-			id: studentSkills.id,
-			currentScore: studentSkills.currentScore,
-			effortToImprove: studentSkills.effortToImprove,
-			improvementBenefit: studentSkills.improvementBenefit,
-			priorityScore: studentSkills.priorityScore,
-			coachLocked: studentSkills.coachLocked,
-			source: studentSkills.source,
-			skillName: skillDefinitions.name,
-			categoryName: skillCategories.name,
-			categoryId: skillCategories.id
-		})
-		.from(studentSkills)
-		.innerJoin(skillDefinitions, eq(studentSkills.skillDefinitionId, skillDefinitions.id))
-		.innerJoin(skillCategories, eq(skillDefinitions.categoryId, skillCategories.id))
-		.where(eq(studentSkills.coachStudentId, student.coachStudentId))
-		.orderBy(skillCategories.name, skillDefinitions.name);
-
-	// Group by category
-	const categoryMap = new Map<
-		string,
-		{
-			name: string;
-			skills: typeof skills;
-		}
-	>();
-
-	for (const skill of skills) {
-		const existing = categoryMap.get(skill.categoryName);
-		if (existing) {
-			existing.skills.push(skill);
-		} else {
-			categoryMap.set(skill.categoryName, { name: skill.categoryName, skills: [skill] });
-		}
-	}
-
-	const categories = [...categoryMap.values()].map((cat) => {
-		const avgScore =
-			cat.skills.length > 0
-				? Math.round(
-						(cat.skills.reduce((sum, s) => sum + s.currentScore, 0) / cat.skills.length) * 10
-					) / 10
-				: 0;
-		return {
-			name: cat.name,
-			avgScore,
-			skillCount: cat.skills.length,
-			skills: cat.skills.map((s) => ({
-				id: s.id,
-				name: s.skillName,
-				currentScore: s.currentScore,
-				effortToImprove: s.effortToImprove,
-				improvementBenefit: s.improvementBenefit,
-				priorityScore: s.priorityScore,
-				coachLocked: s.coachLocked,
-				source: s.source
-			}))
-		};
-	});
+	const [skills, skillCategories, skillDefinitions, notes] = await Promise.all([
+		getStudentSkills(student.coachStudentId),
+		getCategories(),
+		getDefinitions(),
+		db
+			.select()
+			.from(coachNotes)
+			.where(eq(coachNotes.coachStudentId, student.coachStudentId))
+			.orderBy(desc(coachNotes.createdAt))
+	]);
 
 	return {
 		student: {
@@ -116,6 +60,9 @@ export const load: PageServerLoad = async ({ params, locals: { safeGetSession } 
 			since: student.createdAt!.toISOString(),
 			coachStudentId: student.coachStudentId
 		},
-		categories
+		skills,
+		skillCategories,
+		skillDefinitions,
+		notes
 	};
 };
