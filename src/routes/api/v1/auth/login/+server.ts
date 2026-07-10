@@ -5,22 +5,19 @@ import { verifyPassword, createSession } from '$lib/server/services/auth';
 import { db } from '$lib/server/db';
 import { users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+import { dev } from '$app/environment';
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const body = await request.json().catch(() => null);
 	if (!body) return err('INVALID_JSON', 'Invalid request body');
 
 	const parsed = loginSchema.safeParse(body);
 	if (!parsed.success) {
-		return err('VALIDATION_ERROR', parsed.error.errors[0].message);
+		return err('VALIDATION_ERROR', parsed.error.issues[0].message);
 	}
 
 	const { email, password } = parsed.data;
 
-	const [user] = await db
-		.select()
-		.from(users)
-		.where(eq(users.email, email))
-		.limit(1);
+	const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
 	if (!user || !user.passwordHash) {
 		return err('INVALID_CREDENTIALS', 'Invalid email or password', 401);
@@ -36,7 +33,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	cookies.set('session', session.token, {
 		path: '/',
 		httpOnly: true,
-		secure: false,
+		secure: !dev,
 		sameSite: 'lax',
 		maxAge: 30 * 24 * 60 * 60
 	});

@@ -1,6 +1,15 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
+/* White-label accent color — overridden per deployment from site settings */
+:root {
+	--brand: #18181b; /* zinc-900 fallback */
+}
+
+@theme inline {
+	--color-brand: var(--brand);
+}
+
 @layer base {
 	button,
 	a,

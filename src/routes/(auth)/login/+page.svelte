@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+
+	let { data } = $props();
 
 	let email = $state('');
 	let password = $state('');
@@ -25,12 +28,12 @@
 			return;
 		}
 
-		goto('/');
+		goto(resolve('/dashboard'));
 	}
 </script>
 
 <svelte:head>
-	<title>Log in — Perfect Rhythm</title>
+	<title>Log in — {data.branding.siteName}</title>
 </svelte:head>
 
 <div class="space-y-6">
@@ -76,7 +79,7 @@
 		<button
 			type="submit"
 			disabled={loading}
-			class="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
+			class="w-full rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:opacity-90 focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:outline-none disabled:opacity-50"
 		>
 			{loading ? 'Logging in...' : 'Log in'}
 		</button>
@@ -84,6 +87,6 @@
 
 	<p class="text-center text-sm text-zinc-500">
 		Don't have an account?
-		<a href="/signup" class="font-medium text-zinc-900 hover:underline">Sign up</a>
+		<a href={resolve('/signup')} class="font-medium text-zinc-900 hover:underline">Sign up</a>
 	</p>
 </div>

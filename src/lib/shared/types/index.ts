@@ -1,6 +1,12 @@
 export type UserRole = 'student' | 'coach' | 'admin';
 
-export type CompetitionLevel = 'newcomer' | 'novice' | 'intermediate' | 'advanced' | 'allstar' | 'champion';
+export type CompetitionLevel =
+	| 'newcomer'
+	| 'novice'
+	| 'intermediate'
+	| 'advanced'
+	| 'allstar'
+	| 'champion';
 
 export const COMPETITION_LEVELS: CompetitionLevel[] = [
 	'newcomer',
@@ -10,6 +16,25 @@ export const COMPETITION_LEVELS: CompetitionLevel[] = [
 	'allstar',
 	'champion'
 ];
+
+// ---- Site settings (white-label branding) ----
+
+/** Public profile of the teacher who owns this deployment */
+export interface SiteOwner {
+	id: string;
+	displayName: string;
+	bio: string | null;
+	avatarUrl: string | null;
+}
+
+export interface SiteSettings {
+	siteName: string;
+	tagline: string | null;
+	logoPath: string | null;
+	logoUrl: string | null;
+	accentColor: string | null;
+	owner: SiteOwner | null;
+}
 
 export interface ApiSuccess<T> {
 	data: T;
@@ -66,7 +91,9 @@ export interface StudentSkill {
 }
 
 /** Get effective priority for a single skill (used when manual priority is set). */
-export function getManualPriority(skill: StudentSkill): { value: number; source: 'coach' | 'student' } | null {
+export function getManualPriority(
+	skill: StudentSkill
+): { value: number; source: 'coach' | 'student' } | null {
 	if (skill.coachPriority != null) return { value: skill.coachPriority, source: 'coach' };
 	if (skill.studentPriority != null) return { value: skill.studentPriority, source: 'student' };
 	return null;
@@ -80,7 +107,9 @@ export function getManualPriority(skill: StudentSkill): { value: number; source:
  *   highest priorityScore → 1, lowest → 10, same score → same number.
  * Manual and auto share the same scale so priority 1 means the same thing.
  */
-export function assignEffectivePriorities(skills: StudentSkill[]): Map<string, { value: number; source: 'coach' | 'student' | 'system' }> {
+export function assignEffectivePriorities(
+	skills: StudentSkill[]
+): Map<string, { value: number; source: 'coach' | 'student' | 'system' }> {
 	const result = new Map<string, { value: number; source: 'coach' | 'student' | 'system' }>();
 
 	// Collect system skills (no manual override)
@@ -97,7 +126,9 @@ export function assignEffectivePriorities(skills: StudentSkill[]): Map<string, {
 	if (systemSkills.length === 0) return result;
 
 	// Find the distinct scores and map them to 1–10
-	const distinctScores = [...new Set(systemSkills.map((s) => s.priorityScore))].sort((a, b) => b - a);
+	const distinctScores = [...new Set(systemSkills.map((s) => s.priorityScore))].sort(
+		(a, b) => b - a
+	);
 
 	// If only one distinct score, all are priority 1
 	if (distinctScores.length === 1) {
@@ -247,7 +278,13 @@ export interface CoachBookSlotResult {
 
 // ---- Video ----
 
-export type VideoStatus = 'uploading' | 'processing' | 'ready' | 'review_in_progress' | 'reviewed' | 'error';
+export type VideoStatus =
+	| 'uploading'
+	| 'processing'
+	| 'ready'
+	| 'review_in_progress'
+	| 'reviewed'
+	| 'error';
 export type ReviewStatus = 'pending' | 'in_progress' | 'compositing' | 'complete';
 export type AnnotationType = 'draw' | 'arrow' | 'text' | 'highlight';
 

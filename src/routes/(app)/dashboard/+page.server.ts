@@ -1,6 +1,16 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { users, videos, videoReviews, bookingRequests, lessonSlots, coachStudents, studentSkills, skillDefinitions, skillCategories } from '$lib/server/db/schema';
+import {
+	users,
+	videos,
+	videoReviews,
+	bookingRequests,
+	lessonSlots,
+	coachStudents,
+	studentSkills,
+	skillDefinitions,
+	skillCategories
+} from '$lib/server/db/schema';
 import { eq, and, desc, gte, or, sql } from 'drizzle-orm';
 import { subMonths } from 'date-fns';
 
@@ -164,7 +174,11 @@ export const load: PageServerLoad = async ({ locals: { safeGetSession } }) => {
 
 	const relationshipIds = myCoachRelationships.map((r) => r.id);
 
-	let skillsByCategory: { categoryName: string; avgScore: number; skills: { name: string; currentScore: number }[] }[] = [];
+	let skillsByCategory: {
+		categoryName: string;
+		avgScore: number;
+		skills: { name: string; currentScore: number }[];
+	}[] = [];
 	if (relationshipIds.length > 0) {
 		const { inArray } = await import('drizzle-orm');
 		const skillRows = await db
@@ -188,7 +202,8 @@ export const load: PageServerLoad = async ({ locals: { safeGetSession } }) => {
 		}
 		skillsByCategory = [...grouped.entries()].map(([categoryName, skills]) => ({
 			categoryName,
-			avgScore: Math.round((skills.reduce((sum, s) => sum + s.currentScore, 0) / skills.length) * 10) / 10,
+			avgScore:
+				Math.round((skills.reduce((sum, s) => sum + s.currentScore, 0) / skills.length) * 10) / 10,
 			skills
 		}));
 	}

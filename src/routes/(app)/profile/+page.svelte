@@ -50,13 +50,19 @@
 </script>
 
 <svelte:head>
-	<title>Profile — Perfect Rhythm</title>
+	<title>Profile — {data.branding.siteName}</title>
 </svelte:head>
 
 <div class="mx-auto max-w-lg space-y-6 px-4 py-8">
 	<h1 class="text-2xl font-semibold text-zinc-900">Your Profile</h1>
 
-	<form onsubmit={(e) => { e.preventDefault(); save(); }} class="space-y-6">
+	<form
+		onsubmit={(e) => {
+			e.preventDefault();
+			save();
+		}}
+		class="space-y-6"
+	>
 		<!-- About -->
 		<div>
 			<label for="bio" class="block text-sm font-medium text-zinc-700">About</label>
@@ -66,7 +72,7 @@
 				rows={3}
 				maxlength={500}
 				placeholder="A little about you and your dance journey..."
-				class="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+				class="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 focus:outline-none"
 			></textarea>
 			<p class="mt-1 text-xs text-zinc-400">{bio.length}/500</p>
 		</div>
@@ -88,10 +94,10 @@
 				{#if isLeader}
 					<select
 						bind:value={leaderLevel}
-						class="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+						class="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 focus:outline-none"
 					>
 						<option value="">Select level</option>
-						{#each COMPETITION_LEVELS as level}
+						{#each COMPETITION_LEVELS as level (level)}
 							<option value={level}>{formatLevel(level)}</option>
 						{/each}
 					</select>
@@ -111,10 +117,10 @@
 				{#if isFollower}
 					<select
 						bind:value={followerLevel}
-						class="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+						class="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 focus:outline-none"
 					>
 						<option value="">Select level</option>
-						{#each COMPETITION_LEVELS as level}
+						{#each COMPETITION_LEVELS as level (level)}
 							<option value={level}>{formatLevel(level)}</option>
 						{/each}
 					</select>
@@ -132,7 +138,7 @@
 				min="0"
 				max="99"
 				placeholder="0"
-				class="mt-1 w-24 rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+				class="mt-1 w-24 rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 focus:outline-none"
 			/>
 		</div>
 

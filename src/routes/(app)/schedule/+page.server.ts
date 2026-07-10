@@ -5,9 +5,10 @@ import {
 	getBookingsForCoach,
 	getInvisibleBlocksForCoach
 } from '$lib/server/services/schedule';
+import { getOwnerCoach } from '$lib/server/services/site-settings';
 import { db } from '$lib/server/db';
-import { coachStudents, users, events, coachEvents } from '$lib/server/db/schema';
-import { eq, gte } from 'drizzle-orm';
+import { events, coachEvents } from '$lib/server/db/schema';
+import { eq, and, gte } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const { user } = await locals.safeGetSession();
@@ -31,18 +32,19 @@ export const load: PageServerLoad = async ({ locals }) => {
 		};
 	}
 
-	// Student — load all coaches on the platform with their upcoming events
-	const allCoaches = await db
-		.select({
-			coachId: users.id,
-			coachName: users.displayName,
-			coachAvatarUrl: users.avatarUrl,
-			coachBio: users.bio
-		})
-		.from(users)
-		.where(eq(users.role, 'coach'));
+	// Student — single-teacher deployment: load the owner coach and their upcoming events
+	const owner = await getOwnerCoach();
+	if (!owner) {
+		return { role: 'student' as const, coach: null, upcomingEvents: [] };
+	}
 
-	// Load upcoming events for all coaches (for filtering)
+	const coachRow = {
+		coachId: owner.id,
+		coachName: owner.displayName,
+		coachAvatarUrl: owner.avatarUrl,
+		coachBio: owner.bio
+	};
+
 	const today = new Date().toISOString().slice(0, 10);
 	const upcomingEvents = await db
 		.select({
@@ -57,11 +59,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 		})
 		.from(coachEvents)
 		.innerJoin(events, eq(coachEvents.eventId, events.id))
-		.where(gte(events.endDate, today));
+		.where(and(eq(coachEvents.coachId, owner.id), gte(events.endDate, today)));
 
 	return {
 		role: 'student' as const,
-		coaches: allCoaches,
+		coach: coachRow,
 		upcomingEvents
 	};
 };

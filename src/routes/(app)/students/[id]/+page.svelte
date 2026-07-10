@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { formatDistanceToNow, format } from 'date-fns';
+	import { resolve } from '$app/paths';
 	import SkillMap from '$lib/components/skill/SkillMap.svelte';
 
 	let { data } = $props();
@@ -96,12 +97,15 @@
 </script>
 
 <svelte:head>
-	<title>{data.student.displayName} — Perfect Rhythm</title>
+	<title>{data.student.displayName} — {data.branding.siteName}</title>
 </svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-6 px-4 py-8">
 	<!-- Back link -->
-	<a href="/students" class="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900">
+	<a
+		href={resolve('/students')}
+		class="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
+	>
 		<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
 		</svg>
@@ -111,13 +115,11 @@
 	<!-- Student header -->
 	<div class="flex items-center gap-4">
 		{#if data.student.avatarUrl}
-			<img
-				src={data.student.avatarUrl}
-				alt=""
-				class="h-14 w-14 rounded-full object-cover"
-			/>
+			<img src={data.student.avatarUrl} alt="" class="h-14 w-14 rounded-full object-cover" />
 		{:else}
-			<div class="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-lg font-medium text-white">
+			<div
+				class="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-lg font-medium text-white"
+			>
 				{data.student.displayName
 					.split(' ')
 					.map((n: string) => n[0])
@@ -139,16 +141,20 @@
 
 	<!-- Dance profile -->
 	{#if hasRoles || data.student.bio}
-		<div class="rounded-lg border border-zinc-200 bg-white p-4 space-y-3">
+		<div class="space-y-3 rounded-lg border border-zinc-200 bg-white p-4">
 			{#if hasRoles}
 				<div class="flex flex-wrap gap-2">
 					{#if data.student.leaderLevel}
-						<span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+						<span
+							class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700"
+						>
 							Leader · {formatLevel(data.student.leaderLevel)}
 						</span>
 					{/if}
 					{#if data.student.followerLevel}
-						<span class="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3 py-1 text-sm font-medium text-purple-700">
+						<span
+							class="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3 py-1 text-sm font-medium text-purple-700"
+						>
 							Follower · {formatLevel(data.student.followerLevel)}
 						</span>
 					{/if}
@@ -159,7 +165,6 @@
 			{/if}
 		</div>
 	{/if}
-
 
 	<!-- Notes -->
 	<div class="space-y-3">
@@ -173,7 +178,7 @@
 				placeholder="Add a note..."
 				rows={2}
 				maxlength={5000}
-				class="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300 resize-none"
+				class="flex-1 resize-none rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-300 focus:outline-none"
 			></textarea>
 			<button
 				onclick={addNote}
@@ -192,7 +197,10 @@
 			>
 				<svg
 					class="h-4 w-4 transition-transform {notesExpanded ? 'rotate-90' : ''}"
-					fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					viewBox="0 0 24 24"
 				>
 					<path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
 				</svg>
@@ -210,25 +218,22 @@
 									onblur={saveEdit}
 									rows={3}
 									maxlength={5000}
-									class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-300 resize-none"
+									class="w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-300 focus:outline-none"
 								></textarea>
 								<div class="mt-2 flex items-center gap-2">
 									<button
 										onclick={saveEdit}
 										disabled={savingEdit}
 										class="text-xs font-medium text-zinc-700 hover:text-zinc-900"
-									>{savingEdit ? 'Saving...' : 'Save'}</button>
-									<button
-										onmousedown={cancelEdit}
-										class="text-xs text-zinc-400 hover:text-zinc-600"
-									>Cancel</button>
+										>{savingEdit ? 'Saving...' : 'Save'}</button
+									>
+									<button onmousedown={cancelEdit} class="text-xs text-zinc-400 hover:text-zinc-600"
+										>Cancel</button
+									>
 								</div>
 							{:else}
-								<button
-									onclick={() => startEdit(note)}
-									class="w-full text-left"
-								>
-									<p class="whitespace-pre-wrap text-sm text-zinc-700">{note.content}</p>
+								<button onclick={() => startEdit(note)} class="w-full text-left">
+									<p class="text-sm whitespace-pre-wrap text-zinc-700">{note.content}</p>
 								</button>
 								<p class="mt-2 text-xs text-zinc-400">
 									{format(new Date(note.createdAt), 'MMM d, yyyy · h:mm a')}

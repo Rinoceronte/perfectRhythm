@@ -132,7 +132,10 @@ export const studentSkills = pgTable(
 		updatedAt: timestamp('updated_at').defaultNow().notNull()
 	},
 	(t) => [
-		unique('student_skills_coach_student_definition_unique').on(t.coachStudentId, t.skillDefinitionId),
+		unique('student_skills_coach_student_definition_unique').on(
+			t.coachStudentId,
+			t.skillDefinitionId
+		),
 		index('idx_student_skills_coach_student').on(t.coachStudentId),
 		index('idx_student_skills_priority').on(t.coachStudentId, t.priorityScore.desc())
 	]
@@ -287,9 +290,7 @@ export const bookingInterests = pgTable(
 			.references(() => users.id),
 		createdAt: timestamp('created_at').defaultNow().notNull()
 	},
-	(t) => [
-		unique('booking_interests_block_student_unique').on(t.availabilityBlockId, t.studentId)
-	]
+	(t) => [unique('booking_interests_block_student_unique').on(t.availabilityBlockId, t.studentId)]
 );
 
 export const eventInterests = pgTable(
@@ -331,6 +332,19 @@ export const invisibleBlocks = pgTable(
 	]
 );
 
+// Singleton table — exactly one row with id = 1, enforced at the service layer.
+// Holds the white-label branding for this deployment's teacher.
+export const siteSettings = pgTable('site_settings', {
+	id: integer('id').primaryKey().default(1),
+	siteName: text('site_name').notNull().default('Perfect Rhythm'),
+	tagline: text('tagline'),
+	logoPath: text('logo_path'),
+	accentColor: text('accent_color'),
+	ownerUserId: uuid('owner_user_id').references(() => users.id),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
 export const sessions = pgTable(
 	'sessions',
 	{
@@ -341,8 +355,5 @@ export const sessions = pgTable(
 		expiresAt: timestamp('expires_at').notNull(),
 		createdAt: timestamp('created_at').defaultNow().notNull()
 	},
-	(t) => [
-		index('idx_sessions_user').on(t.userId),
-		index('idx_sessions_expires').on(t.expiresAt)
-	]
+	(t) => [index('idx_sessions_user').on(t.userId), index('idx_sessions_expires').on(t.expiresAt)]
 );

@@ -13,8 +13,8 @@ import {
 	users,
 	coachStudents
 } from '$lib/server/db/schema';
-import { eq, and, gte, lte, lt, inArray, ilike } from 'drizzle-orm';
-import { parseBlockTime } from '$lib/server/utils/date';
+import { eq, and, gte, lte, lt, inArray, ilike, count } from 'drizzle-orm';
+import { parseBlockTime, toScheduleDate } from '$lib/server/utils/date';
 import type {
 	Event,
 	AvailabilityBlock,
@@ -121,18 +121,12 @@ export async function createEvent(coachId: string, input: CreateEventInput): Pro
 	}
 
 	// Link coach to event
-	await db
-		.insert(coachEvents)
-		.values({ coachId, eventId: event.id })
-		.onConflictDoNothing();
+	await db.insert(coachEvents).values({ coachId, eventId: event.id }).onConflictDoNothing();
 
 	return event;
 }
 
-export async function updateEvent(
-	id: string,
-	input: UpdateEventInput
-): Promise<Event | null> {
+export async function updateEvent(id: string, input: UpdateEventInput): Promise<Event | null> {
 	const [row] = await db
 		.update(events)
 		.set({
@@ -513,11 +507,7 @@ export async function cancelBooking(bookingId: string): Promise<BookingRequest |
 }
 
 export async function getBookingById(id: string): Promise<BookingRequest | null> {
-	const rows = await db
-		.select()
-		.from(bookingRequests)
-		.where(eq(bookingRequests.id, id))
-		.limit(1);
+	const rows = await db.select().from(bookingRequests).where(eq(bookingRequests.id, id)).limit(1);
 	return (rows[0] as BookingRequest) ?? null;
 }
 
@@ -652,9 +642,7 @@ export async function getEventInterestCount(eventId: string, coachId: string): P
 	const rows = await db
 		.select({ id: eventInterests.id })
 		.from(eventInterests)
-		.where(
-			and(eq(eventInterests.eventId, eventId), eq(eventInterests.coachId, coachId))
-		);
+		.where(and(eq(eventInterests.eventId, eventId), eq(eventInterests.coachId, coachId)));
 	return rows.length;
 }
 
@@ -664,14 +652,14 @@ export async function checkInvisibleBlock(coachId: string, studentId: string): P
 	const block = await db
 		.select({ id: invisibleBlocks.id })
 		.from(invisibleBlocks)
-		.where(
-			and(eq(invisibleBlocks.coachId, coachId), eq(invisibleBlocks.studentId, studentId))
-		)
+		.where(and(eq(invisibleBlocks.coachId, coachId), eq(invisibleBlocks.studentId, studentId)))
 		.limit(1);
 	return block.length > 0;
 }
 
-export async function getInvisibleBlocksForCoach(coachId: string): Promise<
+export async function getInvisibleBlocksForCoach(
+	coachId: string
+): Promise<
 	Array<InvisibleBlock & { studentDisplayName: string; studentAvatarUrl: string | null }>
 > {
 	const rows = await db
@@ -704,9 +692,7 @@ export async function createInvisibleBlock(
 		const existing = await db
 			.select()
 			.from(invisibleBlocks)
-			.where(
-				and(eq(invisibleBlocks.coachId, coachId), eq(invisibleBlocks.studentId, studentId))
-			)
+			.where(and(eq(invisibleBlocks.coachId, coachId), eq(invisibleBlocks.studentId, studentId)))
 			.limit(1);
 		return existing[0] as InvisibleBlock;
 	}
@@ -724,10 +710,7 @@ export async function removeInvisibleBlock(id: string, coachId: string): Promise
 
 // ---- Ownership checks ----
 
-export async function verifyCoachOwnsBlock(
-	coachId: string,
-	blockId: string
-): Promise<boolean> {
+export async function verifyCoachOwnsBlock(coachId: string, blockId: string): Promise<boolean> {
 	const rows = await db
 		.select({ id: availabilityBlocks.id })
 		.from(availabilityBlocks)
@@ -745,16 +728,11 @@ export async function verifyCoachLinkedToEvent(coachId: string, eventId: string)
 	return rows.length > 0;
 }
 
-export async function verifyCoachOwnsBooking(
-	coachId: string,
-	bookingId: string
-): Promise<boolean> {
+export async function verifyCoachOwnsBooking(coachId: string, bookingId: string): Promise<boolean> {
 	const rows = await db
 		.select({ id: bookingRequests.id })
 		.from(bookingRequests)
-		.where(
-			and(eq(bookingRequests.id, bookingId), eq(bookingRequests.coachId, coachId))
-		)
+		.where(and(eq(bookingRequests.id, bookingId), eq(bookingRequests.coachId, coachId)))
 		.limit(1);
 	return rows.length > 0;
 }
@@ -766,9 +744,7 @@ export async function verifyStudentOwnsBooking(
 	const rows = await db
 		.select({ id: bookingRequests.id })
 		.from(bookingRequests)
-		.where(
-			and(eq(bookingRequests.id, bookingId), eq(bookingRequests.studentId, studentId))
-		)
+		.where(and(eq(bookingRequests.id, bookingId), eq(bookingRequests.studentId, studentId)))
 		.limit(1);
 	return rows.length > 0;
 }
@@ -835,10 +811,7 @@ export async function coachBookSlot(
 	const student = await findOrCreateStudent(input.studentEmail, input.studentDisplayName);
 
 	// Ensure coach_students relationship exists
-	await db
-		.insert(coachStudents)
-		.values({ coachId, studentId: student.id })
-		.onConflictDoNothing();
+	await db.insert(coachStudents).values({ coachId, studentId: student.id }).onConflictDoNothing();
 
 	// Book the slot
 	const now = new Date();
@@ -910,4 +883,73 @@ export async function verifySlotBookable(
 	if (!block.bookingOpenAt && !block.priorityBookingOpenAt) return { ok: true };
 
 	return { ok: false, reason: 'Booking not yet open' };
+}
+
+// ---- Public (anonymous visitors — white-label landing page) ----
+
+export interface PublicAvailabilitySummary {
+	blockId: string;
+	scheduleDate: string;
+	eventName: string | null;
+	location: string | null;
+	bookingOpenAt: Date | null;
+	openSlotCount: number;
+}
+
+/**
+ * Schedule summary for the public landing page. Intentionally coarse:
+ * no per-slot times and none of the student-specific logic (invisible
+ * blocks, priority tiers) — nothing here can leak per-student state.
+ */
+export async function getPublicScheduleSummary(coachId: string): Promise<{
+	upcomingEvents: Event[];
+	availability: PublicAvailabilitySummary[];
+}> {
+	const today = toScheduleDate(new Date());
+
+	const eventRows = await db
+		.select({ event: events })
+		.from(coachEvents)
+		.innerJoin(events, eq(coachEvents.eventId, events.id))
+		.where(and(eq(coachEvents.coachId, coachId), gte(events.endDate, today)))
+		.orderBy(events.startDate);
+
+	const availability = await db
+		.select({
+			blockId: availabilityBlocks.id,
+			scheduleDate: availabilityBlocks.scheduleDate,
+			eventName: events.name,
+			location: availabilityBlocks.location,
+			bookingOpenAt: availabilityBlocks.bookingOpenAt,
+			openSlotCount: count(lessonSlots.id)
+		})
+		.from(availabilityBlocks)
+		.leftJoin(events, eq(availabilityBlocks.eventId, events.id))
+		.leftJoin(
+			lessonSlots,
+			and(
+				eq(lessonSlots.availabilityBlockId, availabilityBlocks.id),
+				eq(lessonSlots.status, 'available')
+			)
+		)
+		.where(
+			and(
+				eq(availabilityBlocks.coachId, coachId),
+				eq(availabilityBlocks.isPublished, true),
+				gte(availabilityBlocks.scheduleDate, today)
+			)
+		)
+		.groupBy(
+			availabilityBlocks.id,
+			availabilityBlocks.scheduleDate,
+			events.name,
+			availabilityBlocks.location,
+			availabilityBlocks.bookingOpenAt
+		)
+		.orderBy(availabilityBlocks.scheduleDate);
+
+	return {
+		upcomingEvents: eventRows.map((r) => r.event as Event),
+		availability
+	};
 }

@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+
+	let { data } = $props();
 
 	let displayName = $state('');
 	let email = $state('');
 	let password = $state('');
-	let role = $state<'student' | 'coach'>('student');
 	let error = $state('');
 	let loading = $state(false);
 
@@ -16,7 +18,7 @@
 		const res = await fetch('/api/v1/auth/signup', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ email, password, displayName, role })
+			body: JSON.stringify({ email, password, displayName })
 		});
 
 		const result = await res.json();
@@ -27,18 +29,20 @@
 			return;
 		}
 
-		goto('/');
+		goto(resolve('/dashboard'));
 	}
 </script>
 
 <svelte:head>
-	<title>Sign up — Perfect Rhythm</title>
+	<title>Sign up — {data.branding.siteName}</title>
 </svelte:head>
 
 <div class="space-y-6">
 	<div class="text-center">
 		<h1 class="text-2xl font-semibold tracking-tight text-zinc-900">Create account</h1>
-		<p class="mt-1 text-sm text-zinc-500">Get started with Perfect Rhythm</p>
+		<p class="mt-1 text-sm text-zinc-500">
+			{data.branding.tagline ?? `Get started with ${data.branding.siteName}`}
+		</p>
 	</div>
 
 	<form onsubmit={handleSignup} class="space-y-4">
@@ -88,34 +92,10 @@
 			/>
 		</div>
 
-		<fieldset class="space-y-1.5">
-			<legend class="block text-sm font-medium text-zinc-700">I am a...</legend>
-			<div class="grid grid-cols-2 gap-3">
-				<button
-					type="button"
-					onclick={() => (role = 'student')}
-					class="rounded-md border px-3 py-2 text-sm font-medium transition-colors {role === 'student'
-						? 'border-zinc-900 bg-zinc-900 text-white'
-						: 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400'}"
-				>
-					Student
-				</button>
-				<button
-					type="button"
-					onclick={() => (role = 'coach')}
-					class="rounded-md border px-3 py-2 text-sm font-medium transition-colors {role === 'coach'
-						? 'border-zinc-900 bg-zinc-900 text-white'
-						: 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400'}"
-				>
-					Coach
-				</button>
-			</div>
-		</fieldset>
-
 		<button
 			type="submit"
 			disabled={loading}
-			class="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
+			class="w-full rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:opacity-90 focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:outline-none disabled:opacity-50"
 		>
 			{loading ? 'Creating account...' : 'Create account'}
 		</button>
@@ -123,6 +103,6 @@
 
 	<p class="text-center text-sm text-zinc-500">
 		Already have an account?
-		<a href="/login" class="font-medium text-zinc-900 hover:underline">Log in</a>
+		<a href={resolve('/login')} class="font-medium text-zinc-900 hover:underline">Log in</a>
 	</p>
 </div>

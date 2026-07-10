@@ -1,12 +1,8 @@
 <script lang="ts">
 	import { format, formatDistanceToNow } from 'date-fns';
+	import { resolve } from '$app/paths';
 
 	let { data } = $props();
-
-	function formatSlotTime(iso: string) {
-		const d = new Date(iso);
-		return format(d, 'EEE, MMM d · h:mm a');
-	}
 
 	function formatTimeRange(startIso: string, endIso: string) {
 		const s = new Date(startIso);
@@ -30,9 +26,7 @@
 	let notesAfter = $state('');
 	let savingNotes = $state(false);
 
-	let lessonIsPast = $derived(
-		viewingLesson ? new Date(viewingLesson.endTime) < new Date() : false
-	);
+	let lessonIsPast = $derived(viewingLesson ? new Date(viewingLesson.endTime) < new Date() : false);
 
 	function openLesson(lesson: StudentLesson) {
 		viewingLesson = lesson;
@@ -67,7 +61,7 @@
 </script>
 
 <svelte:head>
-	<title>Dashboard — Perfect Rhythm</title>
+	<title>Dashboard — {data.branding.siteName}</title>
 </svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-8 px-4 py-8">
@@ -78,15 +72,24 @@
 	{#if data.role === 'coach'}
 		<!-- Coach Dashboard -->
 		<div class="grid gap-6 sm:grid-cols-3">
-			<a href="/students" class="rounded-lg border border-zinc-200 bg-white p-4 text-center hover:border-zinc-300 transition-colors">
+			<a
+				href={resolve('/students')}
+				class="rounded-lg border border-zinc-200 bg-white p-4 text-center transition-colors hover:border-zinc-300"
+			>
 				<p class="text-2xl font-semibold text-zinc-900">{data.activeStudentCount}</p>
 				<p class="mt-1 text-sm text-zinc-500">Active Students</p>
 			</a>
-			<a href="/schedule?tab=bookings" class="rounded-lg border border-zinc-200 bg-white p-4 text-center hover:border-zinc-300 transition-colors">
+			<a
+				href="{resolve('/schedule')}?tab=bookings"
+				class="rounded-lg border border-zinc-200 bg-white p-4 text-center transition-colors hover:border-zinc-300"
+			>
 				<p class="text-2xl font-semibold text-zinc-900">{data.pendingBookings.length}</p>
 				<p class="mt-1 text-sm text-zinc-500">Pending Bookings</p>
 			</a>
-			<a href="/videos" class="rounded-lg border border-zinc-200 bg-white p-4 text-center hover:border-zinc-300 transition-colors">
+			<a
+				href={resolve('/videos')}
+				class="rounded-lg border border-zinc-200 bg-white p-4 text-center transition-colors hover:border-zinc-300"
+			>
 				<p class="text-2xl font-semibold text-zinc-900">{data.pendingReviews.length}</p>
 				<p class="mt-1 text-sm text-zinc-500">Videos to Review</p>
 			</a>
@@ -97,15 +100,23 @@
 			<section class="space-y-3">
 				<div class="flex items-center justify-between">
 					<h2 class="text-lg font-medium text-zinc-900">Pending Requests</h2>
-					<a href="/schedule?tab=bookings" class="text-sm text-zinc-500 hover:text-zinc-900">View all</a>
+					<a
+						href="{resolve('/schedule')}?tab=bookings"
+						class="text-sm text-zinc-500 hover:text-zinc-900">View all</a
+					>
 				</div>
 				<ul class="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
-					{#each data.pendingBookings as booking}
+					{#each data.pendingBookings as booking (booking.id)}
 						<li>
-							<a href="/schedule?tab=bookings" class="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 transition-colors">
+							<a
+								href="{resolve('/schedule')}?tab=bookings"
+								class="flex items-center justify-between px-4 py-3 transition-colors hover:bg-zinc-50"
+							>
 								<div>
 									<p class="text-sm font-medium text-zinc-900">{booking.studentName}</p>
-									<p class="text-sm text-zinc-500">{formatTimeRange(booking.startTime, booking.endTime)}</p>
+									<p class="text-sm text-zinc-500">
+										{formatTimeRange(booking.startTime, booking.endTime)}
+									</p>
 								</div>
 								<span class="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white">
 									Respond
@@ -122,17 +133,27 @@
 			<section class="space-y-3">
 				<div class="flex items-center justify-between">
 					<h2 class="text-lg font-medium text-zinc-900">Upcoming Lessons</h2>
-					<a href="/schedule?tab=bookings" class="text-sm text-zinc-500 hover:text-zinc-900">View all</a>
+					<a
+						href="{resolve('/schedule')}?tab=bookings"
+						class="text-sm text-zinc-500 hover:text-zinc-900">View all</a
+					>
 				</div>
 				<ul class="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
-					{#each data.upcomingLessons as lesson}
+					{#each data.upcomingLessons as lesson (lesson.id)}
 						<li>
-							<a href="/schedule?tab=bookings" class="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 transition-colors">
+							<a
+								href="{resolve('/schedule')}?tab=bookings"
+								class="flex items-center justify-between px-4 py-3 transition-colors hover:bg-zinc-50"
+							>
 								<div>
 									<p class="text-sm font-medium text-zinc-900">{lesson.studentName}</p>
-									<p class="text-sm text-zinc-500">{formatTimeRange(lesson.startTime, lesson.endTime)}</p>
+									<p class="text-sm text-zinc-500">
+										{formatTimeRange(lesson.startTime, lesson.endTime)}
+									</p>
 								</div>
-								<span class="rounded-full px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700">
+								<span
+									class="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700"
+								>
 									confirmed
 								</span>
 							</a>
@@ -147,17 +168,18 @@
 			<section class="space-y-3">
 				<div class="flex items-center justify-between">
 					<h2 class="text-lg font-medium text-zinc-900">Videos to Review</h2>
-					<a href="/videos" class="text-sm text-zinc-500 hover:text-zinc-900">View all</a>
+					<a href={resolve('/videos')} class="text-sm text-zinc-500 hover:text-zinc-900">View all</a
+					>
 				</div>
 				<ul class="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
-					{#each data.pendingReviews as review}
+					{#each data.pendingReviews as review (review.videoId)}
 						<li class="flex items-center justify-between px-4 py-3">
 							<div>
 								<p class="text-sm font-medium text-zinc-900">{review.videoTitle}</p>
 								<p class="text-sm text-zinc-500">from {review.studentName}</p>
 							</div>
 							<a
-								href="/videos/{review.videoId}"
+								href={resolve('/(app)/videos/[id]', { id: review.videoId })}
 								class="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
 							>
 								Review
@@ -172,12 +194,14 @@
 		{#if data.pendingBookings.length === 0 && data.upcomingLessons.length === 0 && data.pendingReviews.length === 0}
 			<div class="rounded-lg border border-dashed border-zinc-300 py-12 text-center">
 				<p class="text-sm text-zinc-500">Nothing pending right now.</p>
-				<a href="/schedule" class="mt-2 inline-block text-sm font-medium text-zinc-900 hover:underline">
+				<a
+					href={resolve('/schedule')}
+					class="mt-2 inline-block text-sm font-medium text-zinc-900 hover:underline"
+				>
 					Set up your availability
 				</a>
 			</div>
 		{/if}
-
 	{:else}
 		<!-- Student Dashboard -->
 
@@ -186,27 +210,42 @@
 			<section class="space-y-3">
 				<div class="flex items-center justify-between">
 					<h2 class="text-lg font-medium text-zinc-900">Upcoming Lessons</h2>
-					<a href="/schedule" class="text-sm text-zinc-500 hover:text-zinc-900">Book more</a>
+					<a href={resolve('/schedule')} class="text-sm text-zinc-500 hover:text-zinc-900"
+						>Book more</a
+					>
 				</div>
 				<ul class="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
-					{#each data.upcomingLessons as lesson}
+					{#each data.upcomingLessons as lesson (lesson.id)}
 						<li>
 							<button
 								onclick={() => openLesson(lesson)}
-								class="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-zinc-50 transition-colors"
+								class="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-zinc-50"
 							>
 								<div>
 									<p class="text-sm font-medium text-zinc-900">{lesson.coachName}</p>
-									<p class="text-sm text-zinc-500">{formatTimeRange(lesson.startTime, lesson.endTime)}</p>
+									<p class="text-sm text-zinc-500">
+										{formatTimeRange(lesson.startTime, lesson.endTime)}
+									</p>
 								</div>
 								<div class="flex items-center gap-2">
 									{#if lesson.studentNotesBefore || lesson.studentNotesAfter}
-										<svg class="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+										<svg
+											class="h-4 w-4 text-indigo-400"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
+											/>
 										</svg>
 									{/if}
 									<span
-										class="rounded-full px-2 py-0.5 text-xs font-medium {lesson.status === 'confirmed'
+										class="rounded-full px-2 py-0.5 text-xs font-medium {lesson.status ===
+										'confirmed'
 											? 'bg-green-50 text-green-700'
 											: 'bg-amber-50 text-amber-700'}"
 									>
@@ -225,25 +264,39 @@
 			<section class="space-y-3">
 				<h2 class="text-lg font-medium text-zinc-900">Past Lessons</h2>
 				<ul class="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
-					{#each data.pastLessons as lesson}
+					{#each data.pastLessons as lesson (lesson.id)}
 						<li>
 							<button
 								onclick={() => openLesson(lesson)}
-								class="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-zinc-50 transition-colors"
+								class="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-zinc-50"
 							>
 								<div>
 									<p class="text-sm font-medium text-zinc-900">{lesson.coachName}</p>
-									<p class="text-sm text-zinc-500">{formatTimeRange(lesson.startTime, lesson.endTime)}</p>
+									<p class="text-sm text-zinc-500">
+										{formatTimeRange(lesson.startTime, lesson.endTime)}
+									</p>
 								</div>
 								<div class="flex items-center gap-2">
 									{#if lesson.studentNotesAfter}
-										<svg class="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+										<svg
+											class="h-4 w-4 text-indigo-400"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
+											/>
 										</svg>
 									{:else}
 										<span class="text-xs text-zinc-400">Add notes</span>
 									{/if}
-									<span class="rounded-full px-2 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-500">
+									<span
+										class="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500"
+									>
 										completed
 									</span>
 								</div>
@@ -259,20 +312,21 @@
 			<section class="space-y-3">
 				<div class="flex items-center justify-between">
 					<h2 class="text-lg font-medium text-zinc-900">My Skills</h2>
-					<a href="/skills" class="text-sm text-zinc-500 hover:text-zinc-900">View all</a>
+					<a href={resolve('/skills')} class="text-sm text-zinc-500 hover:text-zinc-900">View all</a
+					>
 				</div>
 
 				<!-- Horizontal bar chart -->
 				<div class="rounded-lg border border-zinc-200 bg-white p-4">
 					<div class="space-y-3">
-						{#each data.skillsByCategory as category}
+						{#each data.skillsByCategory as category (category.categoryName)}
 							<a
-								href="/skills?category={encodeURIComponent(category.categoryName)}"
+								href="{resolve('/skills')}?category={encodeURIComponent(category.categoryName)}"
 								class="group block"
 							>
 								<div class="mb-1 flex items-center justify-between">
 									<span class="text-sm font-medium text-zinc-900">{category.categoryName}</span>
-									<span class="text-xs tabular-nums text-zinc-500">{category.avgScore} / 10</span>
+									<span class="text-xs text-zinc-500 tabular-nums">{category.avgScore} / 10</span>
 								</div>
 								<div class="h-2.5 w-full overflow-hidden rounded-full bg-zinc-100">
 									<div
@@ -292,10 +346,11 @@
 			<section class="space-y-3">
 				<div class="flex items-center justify-between">
 					<h2 class="text-lg font-medium text-zinc-900">Recent Videos</h2>
-					<a href="/videos" class="text-sm text-zinc-500 hover:text-zinc-900">View all</a>
+					<a href={resolve('/videos')} class="text-sm text-zinc-500 hover:text-zinc-900">View all</a
+					>
 				</div>
 				<ul class="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white">
-					{#each data.recentVideos as video}
+					{#each data.recentVideos as video (video.id)}
 						<li class="flex items-center justify-between px-4 py-3">
 							<div class="flex items-center gap-3">
 								{#if video.muxPlaybackId}
@@ -318,10 +373,13 @@
 							</div>
 							<span
 								class="rounded-full px-2 py-0.5 text-xs font-medium
-									{video.status === 'reviewed' ? 'bg-green-50 text-green-700' :
-									video.status === 'ready' ? 'bg-blue-50 text-blue-700' :
-									video.status === 'error' ? 'bg-red-50 text-red-700' :
-									'bg-zinc-100 text-zinc-600'}"
+									{video.status === 'reviewed'
+									? 'bg-green-50 text-green-700'
+									: video.status === 'ready'
+										? 'bg-blue-50 text-blue-700'
+										: video.status === 'error'
+											? 'bg-red-50 text-red-700'
+											: 'bg-zinc-100 text-zinc-600'}"
 							>
 								{video.status.replace('_', ' ')}
 							</span>
@@ -334,12 +392,20 @@
 		<!-- Empty state -->
 		{#if data.upcomingLessons.length === 0 && data.recentVideos.length === 0}
 			<div class="rounded-lg border border-dashed border-zinc-300 py-12 text-center">
-				<p class="text-sm text-zinc-500">You're all set up. Start by booking a lesson or uploading a video.</p>
+				<p class="text-sm text-zinc-500">
+					You're all set up. Start by booking a lesson or uploading a video.
+				</p>
 				<div class="mt-3 flex justify-center gap-3">
-					<a href="/schedule" class="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800">
+					<a
+						href={resolve('/schedule')}
+						class="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+					>
 						Book a lesson
 					</a>
-					<a href="/videos" class="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
+					<a
+						href={resolve('/videos')}
+						class="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+					>
 						Upload a video
 					</a>
 				</div>
@@ -354,12 +420,16 @@
 		class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
 		role="dialog"
 		aria-modal="true"
-		onclick={(e) => { if (e.target === e.currentTarget && !savingNotes) viewingLesson = null; }}
+		onclick={(e) => {
+			if (e.target === e.currentTarget && !savingNotes) viewingLesson = null;
+		}}
 	>
 		<div class="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl">
 			<div class="mb-4">
 				<h3 class="text-base font-semibold text-zinc-900">{viewingLesson.coachName}</h3>
-				<p class="text-sm text-zinc-500">{formatTimeRange(viewingLesson.startTime, viewingLesson.endTime)}</p>
+				<p class="text-sm text-zinc-500">
+					{formatTimeRange(viewingLesson.startTime, viewingLesson.endTime)}
+				</p>
 				<span
 					class="mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium {lessonIsPast
 						? 'bg-zinc-100 text-zinc-500'
@@ -376,45 +446,53 @@
 					<!-- Past lesson: before notes read-only, after notes editable -->
 					{#if notesBefore}
 						<div class="rounded-lg bg-zinc-50 px-3 py-2">
-							<p class="text-xs font-medium text-zinc-500 mb-1">Before — what I wanted to work on</p>
-							<p class="whitespace-pre-wrap text-sm text-zinc-700">{notesBefore}</p>
+							<p class="mb-1 text-xs font-medium text-zinc-500">
+								Before — what I wanted to work on
+							</p>
+							<p class="text-sm whitespace-pre-wrap text-zinc-700">{notesBefore}</p>
 						</div>
 					{/if}
 
 					<div>
-						<label class="mb-1 block text-xs font-medium text-zinc-600">After — what I learned</label>
+						<label class="mb-1 block text-xs font-medium text-zinc-600"
+							>After — what I learned</label
+						>
 						<textarea
 							bind:value={notesAfter}
 							onkeydown={handleNotesKeydown}
 							placeholder="Key takeaways, drills to practice, things to remember..."
 							rows={4}
 							maxlength={2000}
-							class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none resize-none"
+							class="w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none"
 						></textarea>
 					</div>
 				{:else}
 					<!-- Upcoming lesson: both editable -->
 					<div>
-						<label class="mb-1 block text-xs font-medium text-zinc-600">Before — what I want to work on</label>
+						<label class="mb-1 block text-xs font-medium text-zinc-600"
+							>Before — what I want to work on</label
+						>
 						<textarea
 							bind:value={notesBefore}
 							onkeydown={handleNotesKeydown}
 							placeholder="Goals, questions, things to focus on..."
 							rows={3}
 							maxlength={2000}
-							class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none resize-none"
+							class="w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none"
 						></textarea>
 					</div>
 
 					<div>
-						<label class="mb-1 block text-xs font-medium text-zinc-600">After — what I learned</label>
+						<label class="mb-1 block text-xs font-medium text-zinc-600"
+							>After — what I learned</label
+						>
 						<textarea
 							bind:value={notesAfter}
 							onkeydown={handleNotesKeydown}
 							placeholder="Key takeaways, drills to practice, things to remember..."
 							rows={3}
 							maxlength={2000}
-							class="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none resize-none"
+							class="w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none"
 						></textarea>
 					</div>
 				{/if}
