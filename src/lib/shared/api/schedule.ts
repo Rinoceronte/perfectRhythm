@@ -178,7 +178,9 @@ export async function cancelEventInterest(
 	return res.json();
 }
 
-export async function coachBookSlot(input: CoachBookSlotInput): Promise<ApiResponse<CoachBookSlotResult>> {
+export async function coachBookSlot(
+	input: CoachBookSlotInput
+): Promise<ApiResponse<CoachBookSlotResult>> {
 	const res = await fetch('/api/v1/schedule/bookings', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -218,7 +220,9 @@ export async function cancelBooking(id: string): Promise<ApiResponse<BookingRequ
 const IB_BASE = '/api/v1/coach/invisible-blocks';
 
 export async function fetchInvisibleBlocks(): Promise<
-	ApiResponse<Array<InvisibleBlock & { studentDisplayName: string; studentAvatarUrl: string | null }>>
+	ApiResponse<
+		Array<InvisibleBlock & { studentDisplayName: string; studentAvatarUrl: string | null }>
+	>
 > {
 	const res = await fetch(IB_BASE);
 	return res.json();
@@ -235,9 +239,7 @@ export async function createInvisibleBlock(
 	return res.json();
 }
 
-export async function removeInvisibleBlock(
-	id: string
-): Promise<ApiResponse<{ deleted: boolean }>> {
+export async function removeInvisibleBlock(id: string): Promise<ApiResponse<{ deleted: boolean }>> {
 	const res = await fetch(`${IB_BASE}/${id}`, { method: 'DELETE' });
 	return res.json();
 }

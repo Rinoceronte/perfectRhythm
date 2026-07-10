@@ -34,8 +34,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	// Only return the requesting coach's own reviews; student sees all their reviews
 	const allReviews = await getReviewsForVideo(id);
-	const reviews =
-		role === 'coach' ? allReviews.filter((r) => r.coachId === user.id) : allReviews;
+	const reviews = role === 'coach' ? allReviews.filter((r) => r.coachId === user.id) : allReviews;
 
 	return ok({ ...video, reviews });
 };

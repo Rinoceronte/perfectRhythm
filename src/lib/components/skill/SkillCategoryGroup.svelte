@@ -3,20 +3,18 @@
 	import SkillCard from './SkillCard.svelte';
 
 	interface Props {
-		category: string;
 		categoryLabel: string;
 		skills: StudentSkillWithDetails[];
 		isCoach: boolean;
 		priorities: Map<string, { value: number; source: 'coach' | 'student' | 'system' }>;
 		onUpdated: (skill: StudentSkillWithDetails) => void;
 		onDeleted: (id: string) => void;
-		onEditRequest: (skill: StudentSkillWithDetails) => void;
 	}
 
-	let { category, categoryLabel, skills, isCoach, priorities, onUpdated, onDeleted, onEditRequest }: Props =
-		$props();
+	let { categoryLabel, skills, isCoach, priorities, onUpdated, onDeleted }: Props = $props();
 
 	let collapsed = $state(false);
+	let expandedSkillId = $state<string | null>(null);
 </script>
 
 <section>
@@ -24,7 +22,7 @@
 		onclick={() => (collapsed = !collapsed)}
 		class="mb-2 flex w-full items-center justify-between rounded-lg px-1 py-1 text-left"
 	>
-		<h3 class="text-sm font-semibold uppercase tracking-wider text-slate-500">{categoryLabel}</h3>
+		<h3 class="text-sm font-semibold tracking-wider text-slate-500 uppercase">{categoryLabel}</h3>
 		<div class="flex items-center gap-2">
 			<span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
 				{skills.length}
@@ -47,10 +45,11 @@
 				<SkillCard
 					{skill}
 					{isCoach}
+					expanded={expandedSkillId === skill.id}
+					onToggle={() => (expandedSkillId = expandedSkillId === skill.id ? null : skill.id)}
 					priority={priorities.get(skill.id)}
 					{onUpdated}
 					{onDeleted}
-					{onEditRequest}
 				/>
 			{/each}
 		</div>

@@ -3,14 +3,14 @@
 import { db } from '$lib/server/db';
 import { videos, videoReviews, coachStudents } from '$lib/server/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { createSupabaseServerClient } from '$lib/server/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { ingestVideo } from '$lib/server/services/video/mux';
 import type { Annotation, Video, VideoReview } from '$lib/shared/types';
 
 // ---- Supabase Storage helpers ----
 
 export function getSignedUploadUrl(
-	supabase: ReturnType<typeof createSupabaseServerClient>,
+	supabase: SupabaseClient,
 	studentId: string,
 	videoId: string,
 	filename = 'original.mp4'
@@ -19,16 +19,13 @@ export function getSignedUploadUrl(
 	return supabase.storage.from('videos-original').createSignedUploadUrl(path);
 }
 
-export function getPublicVideoUrl(
-	supabase: ReturnType<typeof createSupabaseServerClient>,
-	storagePath: string
-) {
+export function getPublicVideoUrl(supabase: SupabaseClient, storagePath: string) {
 	// Returns a signed URL valid for 1 hour — used to pass to Mux for ingest
 	return supabase.storage.from('videos-original').createSignedUrl(storagePath, 3600);
 }
 
 export async function getVoiceTrackUploadUrl(
-	supabase: ReturnType<typeof createSupabaseServerClient>,
+	supabase: SupabaseClient,
 	coachId: string,
 	reviewId: string
 ) {
@@ -87,9 +84,8 @@ export async function getVideosForCoach(coachId: string): Promise<Video[]> {
 }
 
 export async function confirmUploadAndIngest(
-	supabase: ReturnType<typeof createSupabaseServerClient>,
-	videoId: string,
-	studentId: string
+	supabase: SupabaseClient,
+	videoId: string
 ): Promise<Video> {
 	// Mark as processing
 	await db.update(videos).set({ status: 'processing' }).where(eq(videos.id, videoId));
@@ -126,10 +122,7 @@ export async function markVideoError(assetId: string): Promise<void> {
 	await db.update(videos).set({ status: 'error' }).where(eq(videos.muxAssetId, assetId));
 }
 
-export async function deleteVideo(
-	supabase: ReturnType<typeof createSupabaseServerClient>,
-	videoId: string
-): Promise<void> {
+export async function deleteVideo(supabase: SupabaseClient, videoId: string): Promise<void> {
 	const video = await getVideoById(videoId);
 	if (!video) return;
 
@@ -167,10 +160,7 @@ export async function coachCanAccessVideo(coachId: string, videoId: string): Pro
 
 export async function createReview(videoId: string, coachId: string): Promise<VideoReview> {
 	// Mark video as under review
-	await db
-		.update(videos)
-		.set({ status: 'review_in_progress' })
-		.where(eq(videos.id, videoId));
+	await db.update(videos).set({ status: 'review_in_progress' }).where(eq(videos.id, videoId));
 
 	const [review] = await db
 		.insert(videoReviews)
@@ -204,7 +194,7 @@ export async function saveAnnotations(
 	voiceTrackPath?: string | null
 ): Promise<VideoReview> {
 	const updates: Partial<typeof videoReviews.$inferInsert> = {
-		annotations: annotations as unknown as typeof videoReviews.$inferInsert['annotations'],
+		annotations: annotations as unknown as (typeof videoReviews.$inferInsert)['annotations'],
 		status: 'in_progress'
 	};
 	if (voiceTrackPath !== undefined) {
@@ -246,9 +236,6 @@ export async function markReviewCompositeDone(
 	// Mark the parent video as reviewed
 	const review = await getReviewById(reviewId);
 	if (review) {
-		await db
-			.update(videos)
-			.set({ status: 'reviewed' })
-			.where(eq(videos.id, review.videoId));
+		await db.update(videos).set({ status: 'reviewed' }).where(eq(videos.id, review.videoId));
 	}
 }

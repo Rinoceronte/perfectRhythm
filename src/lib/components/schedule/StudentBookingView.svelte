@@ -1,9 +1,9 @@
 <script lang="ts">
+	import { SvelteSet, SvelteDate } from 'svelte/reactivity';
 	import type { LessonSlot, BookingRequest } from '$lib/shared/types';
 	import {
 		fetchSlotsForStudent,
 		bookSlot,
-		registerInterest,
 		registerEventInterest,
 		checkEventInterest,
 		cancelEventInterest,
@@ -21,7 +21,14 @@
 		eventId?: string | null;
 	}
 
-	let { coachId, coachName, eventStartDate = null, eventEndDate = null, eventName = null, eventId = null }: Props = $props();
+	let {
+		coachId,
+		coachName,
+		eventStartDate = null,
+		eventEndDate = null,
+		eventName = null,
+		eventId = null
+	}: Props = $props();
 
 	// Build date list from event range, or fall back to free navigation
 	let hasEventRange = $derived(!!eventStartDate && !!eventEndDate);
@@ -77,7 +84,7 @@
 	}
 
 	function togglePreferredDate(dateStr: string) {
-		const next = new Set(preferredDates);
+		const next = new SvelteSet(preferredDates);
 		if (next.has(dateStr)) {
 			next.delete(dateStr);
 		} else {
@@ -149,13 +156,13 @@
 	});
 
 	function prevDay() {
-		const d = new Date(selectedDate + 'T12:00:00');
+		const d = new SvelteDate(selectedDate + 'T12:00:00');
 		d.setDate(d.getDate() - 1);
 		selectedDate = d.toISOString().slice(0, 10);
 	}
 
 	function nextDay() {
-		const d = new Date(selectedDate + 'T12:00:00');
+		const d = new SvelteDate(selectedDate + 'T12:00:00');
 		d.setDate(d.getDate() + 1);
 		selectedDate = d.toISOString().slice(0, 10);
 	}
@@ -200,10 +207,6 @@
 	function formatDateTab(dateStr: string) {
 		return format(parseISO(dateStr), 'EEE, MMM d');
 	}
-
-	let bookedSlotIds = $derived(
-		new Set(myBookings.filter((b) => b.status !== 'cancelled').map((b) => b.slotId))
-	);
 
 	function bookingForSlot(slotId: string) {
 		return myBookings.find((b) => b.slotId === slotId && b.status !== 'cancelled');
@@ -300,11 +303,12 @@
 		<!-- Date navigation (only shown when there are slots to browse) -->
 		{#if hasEventRange}
 			<div class="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 text-sm">
-				{#each eventDates() as dateStr}
+				{#each eventDates() as dateStr (dateStr)}
 					<button
 						onclick={() => (selectedDate = dateStr)}
-						class="flex-1 whitespace-nowrap rounded-lg px-3 py-2 font-medium transition-colors {selectedDate === dateStr
-							? 'bg-white shadow text-slate-800'
+						class="flex-1 rounded-lg px-3 py-2 font-medium whitespace-nowrap transition-colors {selectedDate ===
+						dateStr
+							? 'bg-white text-slate-800 shadow'
 							: 'text-slate-500 hover:text-slate-700'}"
 					>
 						{formatDateTab(dateStr)}
@@ -340,13 +344,17 @@
 		{:else if slots.length === 0}
 			<div class="rounded-xl border-2 border-dashed border-slate-200 py-12 text-center">
 				<p class="text-sm text-slate-500">No available slots on this date.</p>
-				<p class="mt-1 text-xs text-slate-400">Check back when booking opens, or try another date.</p>
+				<p class="mt-1 text-xs text-slate-400">
+					Check back when booking opens, or try another date.
+				</p>
 			</div>
 		{:else}
 			<div class="space-y-2">
 				{#each slots as slot (slot.id)}
 					{@const booking = bookingForSlot(slot.id)}
-					<div class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+					<div
+						class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+					>
 						<span class="font-medium text-slate-800">
 							{formatTime(slot.startTime)} – {formatTime(slot.endTime)}
 						</span>
@@ -354,19 +362,18 @@
 						{#if booking}
 							<div class="flex items-center gap-2">
 								<span
-									class="rounded-full px-2 py-0.5 text-xs font-medium {statusColors[booking.status]}"
-									>{booking.status}</span
+									class="rounded-full px-2 py-0.5 text-xs font-medium {statusColors[
+										booking.status
+									]}">{booking.status}</span
 								>
 								{#if booking.status !== 'cancelled'}
 									<button
 										onclick={() => openLessonNotes(booking)}
-										class="text-xs text-indigo-600 hover:underline"
-										>Notes</button
+										class="text-xs text-indigo-600 hover:underline">Notes</button
 									>
 									<button
 										onclick={() => handleCancel(booking.id)}
-										class="text-xs text-red-500 hover:underline"
-										>Cancel</button
+										class="text-xs text-red-500 hover:underline">Cancel</button
 									>
 								{/if}
 							</div>
@@ -396,10 +403,12 @@
 			<p class="mb-4 text-sm text-slate-500">Which dates work for you? (optional)</p>
 
 			<div class="mb-4 flex flex-wrap gap-2">
-				{#each eventDates() as dateStr}
+				{#each eventDates() as dateStr (dateStr)}
 					<button
 						onclick={() => togglePreferredDate(dateStr)}
-						class="rounded-lg border px-3 py-2 text-sm font-medium transition-colors {preferredDates.has(dateStr)
+						class="rounded-lg border px-3 py-2 text-sm font-medium transition-colors {preferredDates.has(
+							dateStr
+						)
 							? 'border-indigo-600 bg-indigo-600 text-white'
 							: 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'}"
 					>
@@ -471,38 +480,42 @@
 
 <!-- Lesson notes modal -->
 {#if viewingBookingId}
-	{@const booking = myBookings.find((b) => b.id === viewingBookingId)}
 	<div
 		class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
 		role="dialog"
 		aria-modal="true"
-		onclick={(e) => { if (e.target === e.currentTarget && !savingNotes) viewingBookingId = null; }}
+		onclick={(e) => {
+			if (e.target === e.currentTarget && !savingNotes) viewingBookingId = null;
+		}}
 	>
 		<div class="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl">
 			<h3 class="mb-4 text-base font-semibold text-slate-800">Lesson notes</h3>
 
 			<div class="space-y-4">
 				<div>
-					<label class="mb-1 block text-xs font-medium text-slate-600">Before — what I want to work on</label>
+					<label class="mb-1 block text-xs font-medium text-slate-600"
+						>Before — what I want to work on</label
+					>
 					<textarea
 						bind:value={notesBefore}
 						onkeydown={handleNotesKeydown}
 						placeholder="Goals, questions, things to focus on..."
 						rows={3}
 						maxlength={2000}
-						class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none resize-none"
+						class="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none"
 					></textarea>
 				</div>
 
 				<div>
-					<label class="mb-1 block text-xs font-medium text-slate-600">After — what I learned</label>
+					<label class="mb-1 block text-xs font-medium text-slate-600">After — what I learned</label
+					>
 					<textarea
 						bind:value={notesAfter}
 						onkeydown={handleNotesKeydown}
 						placeholder="Key takeaways, drills to practice, things to remember..."
 						rows={3}
 						maxlength={2000}
-						class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none resize-none"
+						class="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none"
 					></textarea>
 				</div>
 			</div>

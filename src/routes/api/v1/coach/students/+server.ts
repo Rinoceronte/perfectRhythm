@@ -12,8 +12,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const { session, user } = await locals.safeGetSession();
 	if (!session || !user) return err('UNAUTHORIZED', 'Not authenticated', 401);
 
-	if (user.user_metadata?.role !== 'coach')
-		return err('FORBIDDEN', 'Coach access required', 403);
+	if (user.user_metadata?.role !== 'coach') return err('FORBIDDEN', 'Coach access required', 403);
 
 	const q = url.searchParams.get('q')?.trim() ?? '';
 

@@ -70,7 +70,7 @@
 	</div>
 
 	{#if showForm}
-		<div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+		<div class="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
 			{#if error}
 				<p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
 			{/if}

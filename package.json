@@ -16,7 +16,9 @@
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"db:seed": "node scripts/seed.ts",
+		"teacher:create": "node scripts/create-teacher.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.0.2",
@@ -31,7 +33,7 @@
 		"drizzle-orm": "^0.45.1",
 		"eslint": "^9.39.2",
 		"eslint-config-prettier": "^10.1.8",
-		"eslint-plugin-svelte": "^3.14.0",
+		"eslint-plugin-svelte": "^3.20.0",
 		"globals": "^17.3.0",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.4.1",

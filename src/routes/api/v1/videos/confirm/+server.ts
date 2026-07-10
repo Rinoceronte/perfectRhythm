@@ -1,11 +1,7 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { ok, err } from '$lib/server/utils/api-response';
 import { ConfirmUploadSchema } from '$lib/shared/validation/video';
-import {
-	confirmUploadAndIngest,
-	isVideoOwner,
-	getVideoById
-} from '$lib/server/services/video';
+import { confirmUploadAndIngest, isVideoOwner } from '$lib/server/services/video';
 import { db } from '$lib/server/db';
 import { videos } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
@@ -30,13 +26,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!owns) return err('FORBIDDEN', 'Access denied', 403);
 
 	// Update storage path to the confirmed path
-	await db
-		.update(videos)
-		.set({ supabaseStoragePath })
-		.where(eq(videos.id, videoId));
+	await db.update(videos).set({ supabaseStoragePath }).where(eq(videos.id, videoId));
 
 	// Kick off Mux ingest
-	const video = await confirmUploadAndIngest(locals.supabase, videoId, user.id);
+	const video = await confirmUploadAndIngest(locals.supabase, videoId);
 
 	return ok(video);
 };

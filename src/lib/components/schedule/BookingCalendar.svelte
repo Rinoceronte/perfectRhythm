@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteMap } from 'svelte/reactivity';
 	import type { BookingWithDetails } from '$lib/shared/types';
 	import { respondToBooking, cancelBooking } from '$lib/shared/api/schedule';
 
@@ -17,7 +18,7 @@
 
 	// Group by schedule date (most recent first)
 	let grouped = $derived.by(() => {
-		const map = new Map<string, BookingWithDetails[]>();
+		const map = new SvelteMap<string, BookingWithDetails[]>();
 		for (const b of filtered) {
 			const date = new Date(b.slot.startTime).toISOString().slice(0, 10);
 			if (!map.has(date)) map.set(date, []);
@@ -70,11 +71,11 @@
 
 		<!-- Filter tabs -->
 		<div class="flex gap-1 rounded-lg bg-slate-100 p-1 text-xs">
-			{#each ['all', 'pending', 'confirmed', 'cancelled'] as f}
+			{#each ['all', 'pending', 'confirmed', 'cancelled'] as f (f)}
 				<button
 					onclick={() => (filter = f as typeof filter)}
 					class="rounded-md px-3 py-1 font-medium transition-colors {filter === f
-						? 'bg-white shadow text-slate-800'
+						? 'bg-white text-slate-800 shadow'
 						: 'text-slate-500 hover:text-slate-700'}"
 				>
 					{f.charAt(0).toUpperCase() + f.slice(1)}
@@ -90,7 +91,7 @@
 	{:else}
 		{#each grouped as [date, dayBookings] (date)}
 			<div>
-				<h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+				<h3 class="mb-2 text-xs font-semibold tracking-wide text-slate-400 uppercase">
 					{new Date(date + 'T12:00:00').toLocaleDateString([], {
 						weekday: 'long',
 						month: 'short',
@@ -126,7 +127,11 @@
 								</div>
 
 								<div class="flex shrink-0 flex-col items-end gap-2">
-									<span class="rounded-full px-2 py-0.5 text-xs font-medium {statusColors[booking.status]}">
+									<span
+										class="rounded-full px-2 py-0.5 text-xs font-medium {statusColors[
+											booking.status
+										]}"
+									>
 										{booking.status}
 									</span>
 

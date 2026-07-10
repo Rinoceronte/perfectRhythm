@@ -4,6 +4,7 @@
 		SkillDefinitionWithCategory,
 		StudentSkillWithDetails
 	} from '$lib/shared/types';
+	import { SvelteMap } from 'svelte/reactivity';
 	import { assignEffectivePriorities } from '$lib/shared/types';
 	import { assignStudentSkill } from '$lib/shared/api/skills';
 	import SkillCard from './SkillCard.svelte';
@@ -37,7 +38,7 @@
 
 	// Group skills by category
 	let skillsByCategory = $derived.by(() => {
-		const map = new Map<string, StudentSkillWithDetails[]>();
+		const map = new SvelteMap<string, StudentSkillWithDetails[]>();
 		for (const s of skills) {
 			const list = map.get(s.categoryName) ?? [];
 			list.push(s);
@@ -49,7 +50,10 @@
 	function categoryAvg(categoryName: string): number {
 		const catSkills = skillsByCategory.get(categoryName) ?? [];
 		if (catSkills.length === 0) return 0;
-		return Math.round((catSkills.reduce((sum, s) => sum + s.currentScore, 0) / catSkills.length) * 10) / 10;
+		return (
+			Math.round((catSkills.reduce((sum, s) => sum + s.currentScore, 0) / catSkills.length) * 10) /
+			10
+		);
 	}
 
 	function toggleCategory(name: string) {
@@ -71,9 +75,7 @@
 
 	// Filter out definitions already assigned
 	let assignedDefinitionIds = $derived(new Set(skills.map((s) => s.skillDefinitionId)));
-	let availableDefinitions = $derived(
-		definitions.filter((d) => !assignedDefinitionIds.has(d.id))
-	);
+	let availableDefinitions = $derived(definitions.filter((d) => !assignedDefinitionIds.has(d.id)));
 	let filteredDefinitions = $derived(
 		skillSearch.trim() === ''
 			? availableDefinitions
@@ -82,9 +84,7 @@
 				)
 	);
 	let searchMatchesExact = $derived(
-		availableDefinitions.some(
-			(d) => d.name.toLowerCase() === skillSearch.trim().toLowerCase()
-		)
+		availableDefinitions.some((d) => d.name.toLowerCase() === skillSearch.trim().toLowerCase())
 	);
 
 	// Compute effective priorities across ALL skills
@@ -137,7 +137,6 @@
 		skillSearch = '';
 		showAddSearch = false;
 	}
-
 </script>
 
 <div class="space-y-4">
@@ -173,7 +172,7 @@
 					placeholder="Search skills or type a new one..."
 					maxlength="100"
 					autocomplete="off"
-					class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+					class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:outline-none"
 				/>
 
 				{#if skillDropdownOpen}
@@ -184,7 +183,9 @@
 						aria-label="Close dropdown"
 					></button>
 
-					<ul class="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+					<ul
+						class="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+					>
 						{#each filteredDefinitions as def (def.id)}
 							<li>
 								<button
@@ -210,20 +211,14 @@
 										stroke-width="2"
 										viewBox="0 0 24 24"
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M12 4v16m8-8H4"
-										/>
+										<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
 									</svg>
 									Create "{skillSearch.trim()}"
 								</button>
 							</li>
 						{/if}
 						{#if filteredDefinitions.length === 0 && !skillSearch.trim()}
-							<li class="px-3 py-2 text-sm text-slate-400">
-								Type to search or create a new skill
-							</li>
+							<li class="px-3 py-2 text-sm text-slate-400">Type to search or create a new skill</li>
 						{/if}
 					</ul>
 				{/if}
@@ -239,9 +234,7 @@
 	{#if skills.length === 0}
 		<div class="rounded-xl border-2 border-dashed border-slate-200 py-16 text-center">
 			<p class="text-slate-500">No skills yet.</p>
-			<p class="mt-1 text-sm text-slate-400">
-				Add a skill above to start building the skill map.
-			</p>
+			<p class="mt-1 text-sm text-slate-400">Add a skill above to start building the skill map.</p>
 		</div>
 	{:else}
 		<div class="rounded-lg border border-zinc-200 bg-white">
@@ -255,22 +248,36 @@
 				<div>
 					<button
 						onclick={() => toggleCategory(cat)}
-						class="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-50 transition-colors {catIdx > 0 ? 'border-t border-zinc-100' : ''}"
+						class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 {catIdx >
+						0
+							? 'border-t border-zinc-100'
+							: ''}"
 					>
 						<svg
-							class="h-4 w-4 shrink-0 text-zinc-400 transition-transform {expandedCategory === cat ? 'rotate-90' : ''}"
-							fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+							class="h-4 w-4 shrink-0 text-zinc-400 transition-transform {expandedCategory === cat
+								? 'rotate-90'
+								: ''}"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							stroke="currentColor"
 						>
 							<path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
 						</svg>
 						<div class="min-w-0 flex-1">
 							<div class="flex items-center justify-between">
 								<span class="text-sm font-medium text-zinc-900">{cat}</span>
-								<span class="text-xs tabular-nums text-zinc-500">{avg} / 10</span>
+								<span class="text-xs text-zinc-500 tabular-nums">{avg} / 10</span>
 							</div>
 							<div class="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-zinc-100">
 								<div
-									class="h-full rounded-full transition-all {avg >= 8 ? 'bg-emerald-500' : avg >= 6 ? 'bg-blue-500' : avg >= 4 ? 'bg-amber-500' : 'bg-red-500'}"
+									class="h-full rounded-full transition-all {avg >= 8
+										? 'bg-emerald-500'
+										: avg >= 6
+											? 'bg-blue-500'
+											: avg >= 4
+												? 'bg-amber-500'
+												: 'bg-red-500'}"
 									style="width: {avg * 10}%"
 								></div>
 							</div>
@@ -278,13 +285,14 @@
 					</button>
 
 					{#if expandedCategory === cat}
-						<div class="pl-8 pr-4 py-1">
+						<div class="py-1 pr-4 pl-8">
 							{#each catSkills as skill, i (skill.id)}
 								<SkillCard
 									{skill}
 									{isCoach}
 									expanded={expandedSkillId === skill.id}
-									onToggle={() => (expandedSkillId = expandedSkillId === skill.id ? null : skill.id)}
+									onToggle={() =>
+										(expandedSkillId = expandedSkillId === skill.id ? null : skill.id)}
 									priority={effectivePriorities.get(skill.id)}
 									onUpdated={handleUpdated}
 									onDeleted={handleDeleted}
@@ -305,7 +313,6 @@
 		skillName={addModalSkillName}
 		{categories}
 		{coachStudentId}
-		{isCoach}
 		onCreated={handleSkillCreated}
 		onClose={() => (showAddModal = false)}
 	/>

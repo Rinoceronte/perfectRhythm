@@ -1,4 +1,10 @@
-import type { ApiResponse, Video, VideoReview, VideoWithReviews, Annotation } from '$lib/shared/types';
+import type {
+	ApiResponse,
+	Video,
+	VideoReview,
+	VideoWithReviews,
+	Annotation
+} from '$lib/shared/types';
 
 const BASE = '/api/v1/videos';
 

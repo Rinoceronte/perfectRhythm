@@ -9,9 +9,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const role = user.user_metadata?.role ?? 'student';
 
 	const videos =
-		role === 'coach'
-			? await getVideosForCoach(user.id)
-			: await getVideosForStudent(user.id);
+		role === 'coach' ? await getVideosForCoach(user.id) : await getVideosForStudent(user.id);
 
 	return { videos, role, userId: user.id };
 };

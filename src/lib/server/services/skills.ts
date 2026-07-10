@@ -1,14 +1,21 @@
 import { db } from '$lib/server/db';
-import { skillCategories, skillDefinitions, studentSkills, coachStudents } from '$lib/server/db/schema';
+import {
+	skillCategories,
+	skillDefinitions,
+	studentSkills,
+	coachStudents
+} from '$lib/server/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import type {
 	SkillCategory,
 	SkillDefinitionWithCategory,
-	StudentSkill,
 	StudentSkillWithDetails,
 	SkillSuggestion
 } from '$lib/shared/types';
-import type { AssignStudentSkillInput, UpdateStudentSkillInput } from '$lib/shared/validation/skills';
+import type {
+	AssignStudentSkillInput,
+	UpdateStudentSkillInput
+} from '$lib/shared/validation/skills';
 
 // ---- Priority ----
 
@@ -17,19 +24,20 @@ import type { AssignStudentSkillInput, UpdateStudentSkillInput } from '$lib/shar
  * ability + effort - benefit
  * High ability = less urgent, high effort = harder = less urgent, high benefit = more urgent.
  */
-export function calculatePriority(currentScore: number, effortToImprove: number, improvementBenefit: number): number {
-	const roomToGrow = 10 - currentScore;    // ability 1 → 9, ability 10 → 0
-	const ease = 10 - effortToImprove;        // effort 1 → 9, effort 10 → 0
+export function calculatePriority(
+	currentScore: number,
+	effortToImprove: number,
+	improvementBenefit: number
+): number {
+	const roomToGrow = 10 - currentScore; // ability 1 → 9, ability 10 → 0
+	const ease = 10 - effortToImprove; // effort 1 → 9, effort 10 → 0
 	return (roomToGrow + ease + improvementBenefit) / 3;
 }
 
 // ---- Categories ----
 
 export async function getCategories(): Promise<SkillCategory[]> {
-	const rows = await db
-		.select()
-		.from(skillCategories)
-		.orderBy(skillCategories.name);
+	const rows = await db.select().from(skillCategories).orderBy(skillCategories.name);
 	return rows as SkillCategory[];
 }
 
@@ -43,10 +51,7 @@ export async function getOrCreateCategory(name: string): Promise<SkillCategory> 
 
 	if (existing.length > 0) return existing[0] as SkillCategory;
 
-	const [row] = await db
-		.insert(skillCategories)
-		.values({ name: trimmed })
-		.returning();
+	const [row] = await db.insert(skillCategories).values({ name: trimmed }).returning();
 
 	return row as SkillCategory;
 }
@@ -92,10 +97,7 @@ export async function getOrCreateDefinition(
 
 	if (existing.length > 0) return existing[0] as SkillDefinitionWithCategory;
 
-	const [row] = await db
-		.insert(skillDefinitions)
-		.values({ name: trimmed, categoryId })
-		.returning();
+	const [row] = await db.insert(skillDefinitions).values({ name: trimmed, categoryId }).returning();
 
 	// Fetch with category name
 	const [full] = await db
@@ -291,7 +293,11 @@ export async function applyAiSuggestions(
 	for (const suggestion of suggestions) {
 		if (lockedIds.has(suggestion.skillId)) continue;
 
-		const priority = calculatePriority(suggestion.currentScore, suggestion.effortToImprove, suggestion.improvementBenefit);
+		const priority = calculatePriority(
+			suggestion.currentScore,
+			suggestion.effortToImprove,
+			suggestion.improvementBenefit
+		);
 
 		await db
 			.update(studentSkills)
@@ -304,7 +310,10 @@ export async function applyAiSuggestions(
 				updatedAt: new Date()
 			})
 			.where(
-				and(eq(studentSkills.id, suggestion.skillId), eq(studentSkills.coachStudentId, coachStudentId))
+				and(
+					eq(studentSkills.id, suggestion.skillId),
+					eq(studentSkills.coachStudentId, coachStudentId)
+				)
 			);
 	}
 }

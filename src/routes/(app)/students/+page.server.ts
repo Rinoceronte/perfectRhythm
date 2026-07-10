@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { users, coachStudents, bookingRequests, lessonSlots } from '$lib/server/db/schema';
-import { eq, and, gte, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { redirect } from '@sveltejs/kit';
 import { subMonths } from 'date-fns';
 

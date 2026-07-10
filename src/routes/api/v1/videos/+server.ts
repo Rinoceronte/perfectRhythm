@@ -1,9 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { ok, err } from '$lib/server/utils/api-response';
-import {
-	getVideosForStudent,
-	getVideosForCoach
-} from '$lib/server/services/video';
+import { getVideosForStudent, getVideosForCoach } from '$lib/server/services/video';
 
 /**
  * GET /api/v1/videos

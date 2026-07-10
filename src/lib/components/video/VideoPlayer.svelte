@@ -122,20 +122,25 @@
 <svelte:window
 	onkeydown={(e) => {
 		if (e.target !== document.body) return;
-		if (e.key === ' ') { e.preventDefault(); togglePlay(); }
-		if (e.key === 'ArrowLeft') { e.preventDefault(); stepFrame(-1); }
-		if (e.key === 'ArrowRight') { e.preventDefault(); stepFrame(1); }
+		if (e.key === ' ') {
+			e.preventDefault();
+			togglePlay();
+		}
+		if (e.key === 'ArrowLeft') {
+			e.preventDefault();
+			stepFrame(-1);
+		}
+		if (e.key === 'ArrowRight') {
+			e.preventDefault();
+			stepFrame(1);
+		}
 	}}
 />
 
-<div class="flex flex-col gap-2 w-full select-none">
+<div class="flex w-full flex-col gap-2 select-none">
 	<!-- Video element -->
-	<div class="relative bg-black rounded-lg overflow-hidden aspect-video">
-		<video
-			bind:this={videoEl}
-			class="w-full h-full object-contain"
-			playsinline
-		></video>
+	<div class="relative aspect-video overflow-hidden rounded-lg bg-black">
+		<video bind:this={videoEl} class="h-full w-full object-contain" playsinline></video>
 	</div>
 
 	<!-- Timeline scrubber -->
@@ -145,7 +150,7 @@
 		max={durationMs || 1}
 		value={currentTimeMs}
 		oninput={handleScrub}
-		class="w-full accent-blue-500 h-1.5 cursor-pointer"
+		class="h-1.5 w-full cursor-pointer accent-blue-500"
 	/>
 
 	<!-- Controls row -->
@@ -153,27 +158,27 @@
 		<!-- Step back -->
 		<button
 			onclick={() => stepFrame(-1)}
-			class="p-1.5 rounded hover:bg-gray-100"
+			class="rounded p-1.5 hover:bg-gray-100"
 			title="Step back 1 frame (←)"
 		>
-			<svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-				<path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/>
+			<svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+				<path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
 			</svg>
 		</button>
 
 		<!-- Play/pause -->
 		<button
 			onclick={togglePlay}
-			class="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700"
+			class="rounded-full bg-blue-600 p-2 text-white hover:bg-blue-700"
 			title="Play/Pause (Space)"
 		>
 			{#if isPlaying}
-				<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-					<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+				<svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
 				</svg>
 			{:else}
-				<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-					<path d="M8 5v14l11-7z"/>
+				<svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M8 5v14l11-7z" />
 				</svg>
 			{/if}
 		</button>
@@ -181,16 +186,16 @@
 		<!-- Step forward -->
 		<button
 			onclick={() => stepFrame(1)}
-			class="p-1.5 rounded hover:bg-gray-100"
+			class="rounded p-1.5 hover:bg-gray-100"
 			title="Step forward 1 frame (→)"
 		>
-			<svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-				<path d="M6 18l8.5-6L6 6v12zm2.5-6 5.5 3.89V8.11L8.5 12zM16 6h2v12h-2z"/>
+			<svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+				<path d="M6 18l8.5-6L6 6v12zm2.5-6 5.5 3.89V8.11L8.5 12zM16 6h2v12h-2z" />
 			</svg>
 		</button>
 
 		<!-- Time display -->
-		<span class="text-gray-600 tabular-nums text-xs">
+		<span class="text-xs text-gray-600 tabular-nums">
 			{formatTime(currentTimeMs)} / {formatTime(durationMs)}
 		</span>
 
@@ -199,13 +204,11 @@
 
 		<!-- Speed selector -->
 		<div class="flex gap-1">
-			{#each RATES as rate}
+			{#each RATES as rate (rate)}
 				<button
 					onclick={() => setRate(rate)}
-					class="px-2 py-0.5 rounded text-xs font-medium transition-colors
-						{playbackRate === rate
-							? 'bg-blue-600 text-white'
-							: 'bg-gray-100 text-gray-700 hover:bg-gray-200'}"
+					class="rounded px-2 py-0.5 text-xs font-medium transition-colors
+						{playbackRate === rate ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}"
 				>
 					{rate}×
 				</button>

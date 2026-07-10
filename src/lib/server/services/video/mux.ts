@@ -31,14 +31,9 @@ export function getThumbnailUrl(playbackId: string, time = 0): string {
 	return `https://image.mux.com/${playbackId}/thumbnail.jpg?time=${time}`;
 }
 
-export function verifyMuxWebhook(
-	rawBody: string,
-	signature: string,
-	secret: string
-): boolean {
+export function verifyMuxWebhook(rawBody: string, signature: string, secret: string): boolean {
 	try {
-		const webhooks = new Mux.Webhooks(secret);
-		webhooks.verifySignature(rawBody, { 'mux-signature': signature });
+		mux.webhooks.verifySignature(rawBody, { 'mux-signature': signature }, secret);
 		return true;
 	} catch {
 		return false;

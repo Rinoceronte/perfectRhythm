@@ -72,7 +72,10 @@
 		if (res.error) return null;
 
 		const { uploadUrl, storagePath } = res.data;
-		await uploadToSignedUrl(uploadUrl, new File([pendingVoiceBlob], 'voice.webm', { type: 'audio/webm' }));
+		await uploadToSignedUrl(
+			uploadUrl,
+			new File([pendingVoiceBlob], 'voice.webm', { type: 'audio/webm' })
+		);
 		pendingVoiceBlob = null;
 		return storagePath;
 	}
@@ -96,7 +99,8 @@
 	}
 
 	async function handleComplete() {
-		if (!confirm('Mark this review as complete? This will trigger composite video generation.')) return;
+		if (!confirm('Mark this review as complete? This will trigger composite video generation.'))
+			return;
 
 		completing = true;
 		saveError = null;
@@ -126,7 +130,7 @@
 	});
 </script>
 
-<div class="flex flex-col h-full gap-3">
+<div class="flex h-full flex-col gap-3">
 	<!-- Top bar -->
 	<div class="flex items-center justify-between">
 		<div>
@@ -140,14 +144,14 @@
 			<button
 				onclick={handleSave}
 				disabled={saving}
-				class="px-3 py-1.5 rounded-md border border-gray-300 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+				class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
 			>
 				{saving ? 'Saving…' : 'Save'}
 			</button>
 			<button
 				onclick={handleComplete}
 				disabled={completing || saving}
-				class="px-3 py-1.5 rounded-md bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+				class="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
 			>
 				{completing ? 'Submitting…' : 'Complete Review'}
 			</button>
@@ -159,7 +163,7 @@
 	{/if}
 
 	<!-- Main area: toolbar + video/canvas + right panel -->
-	<div class="flex gap-3 flex-1 min-h-0">
+	<div class="flex min-h-0 flex-1 gap-3">
 		<!-- Toolbar (left) -->
 		<ReviewToolbar
 			{activeTool}
@@ -170,11 +174,11 @@
 		/>
 
 		<!-- Video + canvas (center) -->
-		<div class="flex flex-col flex-1 gap-2 min-w-0">
+		<div class="flex min-w-0 flex-1 flex-col gap-2">
 			<!-- Video + annotation overlay -->
 			<div
 				bind:this={videoWrapEl}
-				class="relative bg-black rounded-lg overflow-hidden aspect-video"
+				class="relative aspect-video overflow-hidden rounded-lg bg-black"
 			>
 				{#if video.muxPlaybackId}
 					<VideoPlayer
@@ -194,7 +198,7 @@
 						onAnnotationRemoved={handleAnnotationRemoved}
 					/>
 				{:else}
-					<div class="flex items-center justify-center h-full text-white text-sm">
+					<div class="flex h-full items-center justify-center text-sm text-white">
 						Video is still processing…
 					</div>
 				{/if}
@@ -212,8 +216,9 @@
 		<!-- Right panel: voice recorder -->
 		<div class="w-64 flex-shrink-0">
 			<VoiceRecorder onRecordingReady={handleRecordingReady} />
-			<p class="text-xs text-gray-400 mt-2">
-				Record a continuous voice-over. It will be mixed with the video when you complete the review.
+			<p class="mt-2 text-xs text-gray-400">
+				Record a continuous voice-over. It will be mixed with the video when you complete the
+				review.
 			</p>
 		</div>
 	</div>

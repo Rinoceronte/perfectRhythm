@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import SkillMap from '$lib/components/skill/SkillMap.svelte';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 
 	let { data }: { data: PageData } = $props();
 
@@ -15,7 +16,7 @@
 <div class="mx-auto max-w-2xl px-4 py-6">
 	{#if data.isCoach && data.studentId}
 		<a
-			href="/students/{data.studentId}"
+			href={resolve('/(app)/students/[id]', { id: data.studentId })}
 			class="mb-4 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-700"
 		>
 			&larr; Back to student

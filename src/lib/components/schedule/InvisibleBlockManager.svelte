@@ -102,22 +102,26 @@
 			type="text"
 			bind:value={query}
 			oninput={handleInput}
-			onfocus={() => { if (results.length > 0) showResults = true; }}
+			onfocus={() => {
+				if (results.length > 0) showResults = true;
+			}}
 			onblur={() => setTimeout(() => (showResults = false), 200)}
 			placeholder="Search student by name..."
 			disabled={adding}
 			class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none disabled:opacity-50"
 		/>
 		{#if searching}
-			<span class="absolute right-3 top-2.5 text-xs text-slate-400">Searching...</span>
+			<span class="absolute top-2.5 right-3 text-xs text-slate-400">Searching...</span>
 		{/if}
 
 		{#if showResults}
-			<div class="absolute z-30 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg overflow-hidden">
+			<div
+				class="absolute z-30 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg"
+			>
 				{#if results.length === 0}
 					<p class="px-3 py-2 text-sm text-slate-400">No students found</p>
 				{:else}
-					{#each results as student}
+					{#each results as student (student.studentId)}
 						<button
 							onclick={() => handleSelect(student)}
 							class="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-slate-50"
@@ -151,7 +155,9 @@
 	{:else}
 		<div class="space-y-2">
 			{#each blocks as block (block.id)}
-				<div class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
+				<div
+					class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3"
+				>
 					<div class="flex items-center gap-3">
 						{#if block.studentAvatarUrl}
 							<img
@@ -168,9 +174,7 @@
 						{/if}
 						<span class="text-sm font-medium text-slate-700">{block.studentDisplayName}</span>
 					</div>
-					<button
-						onclick={() => handleRemove(block)}
-						class="text-xs text-red-500 hover:underline"
+					<button onclick={() => handleRemove(block)} class="text-xs text-red-500 hover:underline"
 						>Remove block</button
 					>
 				</div>

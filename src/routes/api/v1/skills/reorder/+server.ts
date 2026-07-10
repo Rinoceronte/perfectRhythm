@@ -46,9 +46,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			db
 				.update(studentSkills)
 				.set({ priorityScore: total - index, updatedAt: new Date() })
-				.where(
-					and(eq(studentSkills.id, id), eq(studentSkills.coachStudentId, coachStudentId))
-				)
+				.where(and(eq(studentSkills.id, id), eq(studentSkills.coachStudentId, coachStudentId)))
 		)
 	);
 

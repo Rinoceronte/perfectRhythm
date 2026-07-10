@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import type { Annotation, AnnotationType, DrawAnnotation, TextAnnotation } from '$lib/shared/types';
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+	import type {
+		Annotation,
+		AnnotationType,
+		DrawAnnotation,
+		TextAnnotation
+	} from '$lib/shared/types';
 
 	interface Props {
 		/** Current video time in ms — used to attach timestamps and show/hide annotations */
@@ -28,10 +34,10 @@
 	let fabricCanvas: import('fabric').Canvas | null = null;
 
 	// Track which annotation objects are currently visible so we can hide them
-	const visibleAnnotationIds = new Set<string>();
+	const visibleAnnotationIds = new SvelteSet<string>();
 
 	// Map from annotation id → fabric object(s)
-	const fabricObjects = new Map<string, import('fabric').FabricObject[]>();
+	const fabricObjects = new SvelteMap<string, import('fabric').FabricObject[]>();
 
 	async function initFabric() {
 		if (!canvasEl) return;
@@ -71,10 +77,10 @@
 
 		// Handle click-to-place for arrow / text / highlight
 		fabricCanvas.on('mouse:up', async (e) => {
-			if (!e.pointer || !fabricCanvas) return;
+			if (!e.scenePoint || !fabricCanvas) return;
 			if (activeTool === 'select' || activeTool === 'draw' || activeTool === 'erase') return;
 
-			const { x, y } = e.pointer;
+			const { x, y } = e.scenePoint;
 			const id = crypto.randomUUID();
 			let fabObj: import('fabric').FabricObject | null = null;
 
@@ -134,9 +140,10 @@
 					id,
 					timestampMs: currentTimeMs,
 					type: activeTool as AnnotationType,
-					data: activeTool === 'text'
-						? ({ text: 'Label', fontSize: 20, x, y } satisfies TextAnnotation)
-						: ({ path: '' } satisfies DrawAnnotation),
+					data:
+						activeTool === 'text'
+							? ({ text: 'Label', fontSize: 20, x, y } satisfies TextAnnotation)
+							: ({ path: '' } satisfies DrawAnnotation),
 					durationMs: 3000,
 					color: activeColor
 				};
@@ -148,7 +155,7 @@
 		// Erase: remove clicked object
 		fabricCanvas.on('mouse:down', (e) => {
 			if (activeTool !== 'erase' || !fabricCanvas) return;
-			const target = fabricCanvas.findTarget(e.e);
+			const { target } = fabricCanvas.findTarget(e.e);
 			if (!target) return;
 
 			const tagged = target as import('fabric').FabricObject & { annotationId?: string };
@@ -178,8 +185,7 @@
 
 		annotations.forEach((ann) => {
 			const visible =
-				currentTimeMs >= ann.timestampMs &&
-				currentTimeMs < ann.timestampMs + ann.durationMs;
+				currentTimeMs >= ann.timestampMs && currentTimeMs < ann.timestampMs + ann.durationMs;
 
 			const objs = fabricObjects.get(ann.id);
 			if (!objs) return;
@@ -207,8 +213,7 @@
 
 	export function resizeTo(width: number, height: number) {
 		if (!fabricCanvas) return;
-		fabricCanvas.setWidth(width);
-		fabricCanvas.setHeight(height);
+		fabricCanvas.setDimensions({ width, height });
 		fabricCanvas.renderAll();
 	}
 
@@ -221,6 +226,6 @@
 
 <canvas
 	bind:this={canvasEl}
-	class="absolute inset-0 w-full h-full"
+	class="absolute inset-0 h-full w-full"
 	style="pointer-events: {interactive ? 'all' : 'none'};"
 ></canvas>

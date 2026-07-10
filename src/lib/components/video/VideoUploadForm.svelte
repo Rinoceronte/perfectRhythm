@@ -72,7 +72,7 @@
 
 <form onsubmit={handleSubmit} class="flex flex-col gap-4">
 	<div>
-		<label for="video-title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+		<label for="video-title" class="mb-1 block text-sm font-medium text-gray-700">Title</label>
 		<input
 			id="video-title"
 			type="text"
@@ -80,13 +80,13 @@
 			required
 			maxlength="200"
 			placeholder="e.g. Practice session 2/24"
-			class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+			class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
 		/>
 	</div>
 
 	<div>
-		<label for="video-desc" class="block text-sm font-medium text-gray-700 mb-1">
-			Description <span class="text-gray-400 font-normal">(optional)</span>
+		<label for="video-desc" class="mb-1 block text-sm font-medium text-gray-700">
+			Description <span class="font-normal text-gray-400">(optional)</span>
 		</label>
 		<textarea
 			id="video-desc"
@@ -94,7 +94,7 @@
 			maxlength="2000"
 			rows="2"
 			placeholder="What were you working on?"
-			class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+			class="w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
 		></textarea>
 	</div>
 
@@ -102,12 +102,17 @@
 	<div
 		role="button"
 		tabindex="0"
-		class="relative border-2 border-dashed rounded-lg p-8 text-center transition-colors
+		class="relative rounded-lg border-2 border-dashed p-8 text-center transition-colors
 			{dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}"
-		ondragover={(e) => { e.preventDefault(); dragOver = true; }}
+		ondragover={(e) => {
+			e.preventDefault();
+			dragOver = true;
+		}}
 		ondragleave={() => (dragOver = false)}
 		ondrop={handleDrop}
-		onkeydown={(e) => { if (e.key === 'Enter') document.getElementById('video-file-input')?.click(); }}
+		onkeydown={(e) => {
+			if (e.key === 'Enter') document.getElementById('video-file-input')?.click();
+		}}
 		onclick={() => document.getElementById('video-file-input')?.click()}
 	>
 		<input
@@ -119,22 +124,24 @@
 		/>
 		{#if file}
 			<p class="text-sm font-medium text-gray-800">{file.name}</p>
-			<p class="text-xs text-gray-500 mt-1">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
+			<p class="mt-1 text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
 		{:else}
-			<p class="text-sm text-gray-500">Drag a video here or <span class="text-blue-600 underline">browse</span></p>
-			<p class="text-xs text-gray-400 mt-1">MP4, MOV, WebM — up to 2 GB</p>
+			<p class="text-sm text-gray-500">
+				Drag a video here or <span class="text-blue-600 underline">browse</span>
+			</p>
+			<p class="mt-1 text-xs text-gray-400">MP4, MOV, WebM — up to 2 GB</p>
 		{/if}
 	</div>
 
 	{#if uploading}
 		<div class="space-y-1">
-			<div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+			<div class="h-2 overflow-hidden rounded-full bg-gray-200">
 				<div
 					class="h-full bg-blue-500 transition-all duration-200"
 					style="width: {progress}%"
 				></div>
 			</div>
-			<p class="text-xs text-gray-500 text-right">{progress}%</p>
+			<p class="text-right text-xs text-gray-500">{progress}%</p>
 		</div>
 	{/if}
 
@@ -146,7 +153,7 @@
 		type="submit"
 		disabled={uploading || !file || !title.trim()}
 		class="w-full rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white
-			hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+			transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 	>
 		{uploading ? 'Uploading…' : 'Upload Video'}
 	</button>

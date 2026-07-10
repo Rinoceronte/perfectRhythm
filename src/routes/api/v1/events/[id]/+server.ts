@@ -1,7 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { ok, err } from '$lib/server/utils/api-response';
 import {
-	getEventById,
 	updateEvent,
 	unlinkCoachFromEvent,
 	verifyCoachLinkedToEvent
@@ -16,8 +15,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	const { session, user } = await locals.safeGetSession();
 	if (!session || !user) return err('UNAUTHORIZED', 'Not authenticated', 401);
 
-	if (user.user_metadata?.role !== 'coach')
-		return err('FORBIDDEN', 'Coach access required', 403);
+	if (user.user_metadata?.role !== 'coach') return err('FORBIDDEN', 'Coach access required', 403);
 
 	const { id } = params;
 	if (!id) return err('BAD_REQUEST', 'Event ID required');
@@ -43,8 +41,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	const { session, user } = await locals.safeGetSession();
 	if (!session || !user) return err('UNAUTHORIZED', 'Not authenticated', 401);
 
-	if (user.user_metadata?.role !== 'coach')
-		return err('FORBIDDEN', 'Coach access required', 403);
+	if (user.user_metadata?.role !== 'coach') return err('FORBIDDEN', 'Coach access required', 403);
 
 	const { id } = params;
 	if (!id) return err('BAD_REQUEST', 'Event ID required');

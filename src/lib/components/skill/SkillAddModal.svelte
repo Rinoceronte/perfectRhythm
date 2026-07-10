@@ -1,24 +1,30 @@
 <script lang="ts">
-	import type { SkillCategory, SkillDefinitionWithCategory, StudentSkillWithDetails } from '$lib/shared/types';
+	import type {
+		SkillCategory,
+		SkillDefinitionWithCategory,
+		StudentSkillWithDetails
+	} from '$lib/shared/types';
 	import { createCategory, createDefinition, assignStudentSkill } from '$lib/shared/api/skills';
 
 	interface Props {
 		skillName: string;
 		categories: SkillCategory[];
 		coachStudentId: string;
-		isCoach: boolean;
-		onCreated: (skill: StudentSkillWithDetails, newCategory?: SkillCategory, newDefinition?: SkillDefinitionWithCategory) => void;
+		onCreated: (
+			skill: StudentSkillWithDetails,
+			newCategory?: SkillCategory,
+			newDefinition?: SkillDefinitionWithCategory
+		) => void;
 		onClose: () => void;
 	}
 
-	let { skillName, categories, coachStudentId, isCoach, onCreated, onClose }: Props = $props();
+	let { skillName, categories, coachStudentId, onCreated, onClose }: Props = $props();
 
 	let name = $state(skillName);
 	let currentScore = $state(5);
 	let effortToImprove = $state(5);
 	let improvementBenefit = $state(5);
 	let priorityValue = $state<string>('');
-	let notes = $state('');
 	let saving = $state(false);
 	let errorMsg = $state('');
 
@@ -30,9 +36,7 @@
 	let filteredCategories = $derived(
 		categorySearch.trim() === ''
 			? categories
-			: categories.filter((c) =>
-					c.name.toLowerCase().includes(categorySearch.trim().toLowerCase())
-				)
+			: categories.filter((c) => c.name.toLowerCase().includes(categorySearch.trim().toLowerCase()))
 	);
 	let categorySearchMatchesExact = $derived(
 		categories.some((c) => c.name.toLowerCase() === categorySearch.trim().toLowerCase())
@@ -133,19 +137,23 @@
 		<div class="space-y-5">
 			<!-- Skill name -->
 			<div>
-				<label for="newSkillName" class="mb-1 block text-sm font-medium text-slate-700">Skill name</label>
+				<label for="newSkillName" class="mb-1 block text-sm font-medium text-slate-700"
+					>Skill name</label
+				>
 				<input
 					id="newSkillName"
 					type="text"
 					bind:value={name}
 					maxlength="100"
-					class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+					class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:outline-none"
 				/>
 			</div>
 
 			<!-- Category -->
 			<div>
-				<label for="newSkillCategory" class="mb-1 block text-sm font-medium text-slate-700">Category</label>
+				<label for="newSkillCategory" class="mb-1 block text-sm font-medium text-slate-700"
+					>Category</label
+				>
 				<div class="relative">
 					<input
 						id="newSkillCategory"
@@ -154,13 +162,15 @@
 						onfocus={() => (categoryDropdownOpen = true)}
 						oninput={() => {
 							categoryDropdownOpen = true;
-							const match = categories.find((c) => c.name.toLowerCase() === categorySearch.trim().toLowerCase());
+							const match = categories.find(
+								(c) => c.name.toLowerCase() === categorySearch.trim().toLowerCase()
+							);
 							selectedCategoryId = match ? match.id : '';
 						}}
 						placeholder="Search or create category..."
 						maxlength="100"
 						autocomplete="off"
-						class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+						class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:outline-none"
 					/>
 
 					{#if categoryDropdownOpen}
@@ -171,12 +181,17 @@
 							aria-label="Close dropdown"
 						></button>
 
-						<ul class="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+						<ul
+							class="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+						>
 							{#each filteredCategories as cat (cat.id)}
 								<li>
 									<button
 										onclick={() => selectCategory(cat)}
-										class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 {cat.id === selectedCategoryId ? 'bg-blue-50 font-medium text-blue-700' : ''}"
+										class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 {cat.id ===
+										selectedCategoryId
+											? 'bg-blue-50 font-medium text-blue-700'
+											: ''}"
 									>
 										{cat.name}
 									</button>
@@ -192,7 +207,13 @@
 										}}
 										class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-blue-600 hover:bg-blue-50"
 									>
-										<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+										<svg
+											class="h-4 w-4"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											viewBox="0 0 24 24"
+										>
 											<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
 										</svg>
 										Create "{categorySearch.trim()}"
@@ -279,10 +300,10 @@
 				<select
 					id="addPriority"
 					bind:value={priorityValue}
-					class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+					class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:outline-none"
 				>
 					<option value="">Auto</option>
-					{#each Array.from({ length: 10 }, (_, i) => i + 1) as n}
+					{#each Array.from({ length: 10 }, (_, i) => i + 1) as n (n)}
 						<option value={n.toString()}>{n}</option>
 					{/each}
 				</select>

@@ -16,9 +16,7 @@
 	let effortToImprove = $state(skill.effortToImprove);
 	let improvementBenefit = $state(skill.improvementBenefit);
 	let priorityValue = $state<string>(
-		isCoach
-			? (skill.coachPriority?.toString() ?? '')
-			: (skill.studentPriority?.toString() ?? '')
+		isCoach ? (skill.coachPriority?.toString() ?? '') : (skill.studentPriority?.toString() ?? '')
 	);
 	let notes = $state(skill.notes ?? '');
 	let saving = $state(false);
@@ -49,13 +47,8 @@
 
 		onSaved(res.data!);
 	}
-
-	function handleBackdropClick(e: MouseEvent) {
-		if (e.target === e.currentTarget) onClose();
-	}
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
 	class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
 	role="dialog"
@@ -157,10 +150,10 @@
 				<select
 					id="priority"
 					bind:value={priorityValue}
-					class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+					class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:outline-none"
 				>
 					<option value="">Auto</option>
-					{#each Array.from({ length: 10 }, (_, i) => i + 1) as n}
+					{#each Array.from({ length: 10 }, (_, i) => i + 1) as n (n)}
 						<option value={n.toString()}>{n}</option>
 					{/each}
 				</select>
@@ -175,7 +168,7 @@
 					maxlength="500"
 					rows="3"
 					placeholder="Optional coaching notes..."
-					class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+					class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:outline-none"
 				></textarea>
 			</div>
 

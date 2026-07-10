@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteSet } from 'svelte/reactivity';
 	import type { AvailabilityBlock, Event, BookingWithDetails } from '$lib/shared/types';
 	import { format, eachDayOfInterval, parseISO } from 'date-fns';
 	import { createEvent } from '$lib/shared/api/schedule';
@@ -53,7 +54,7 @@
 			const json = await res.json();
 			if (json.data && json.data.length > 0) {
 				// Deduplicate by name+city (same event created by different coaches)
-				const seen = new Set<string>();
+				const seen = new SvelteSet<string>();
 				searchResults = json.data.filter((e: Event) => {
 					const key = `${e.name}|${e.city}`;
 					if (seen.has(key)) return false;
@@ -81,14 +82,30 @@
 	}
 
 	function resetEventForm() {
-		eventForm = { name: '', location: '', city: '', stateOrRegion: '', country: 'US', startDate: '', endDate: '', isRecurring: false, isLocal: false };
+		eventForm = {
+			name: '',
+			location: '',
+			city: '',
+			stateOrRegion: '',
+			country: 'US',
+			startDate: '',
+			endDate: '',
+			isRecurring: false,
+			isLocal: false
+		};
 		eventError = '';
 		searchResults = [];
 		showDropdown = false;
 	}
 
 	async function handleCreateEvent() {
-		if (!eventForm.name || !eventForm.location || !eventForm.city || !eventForm.startDate || !eventForm.endDate) {
+		if (
+			!eventForm.name ||
+			!eventForm.location ||
+			!eventForm.city ||
+			!eventForm.startDate ||
+			!eventForm.endDate
+		) {
 			eventError = 'All required fields must be filled.';
 			return;
 		}
@@ -162,7 +179,10 @@
 		<div class="flex items-center justify-between">
 			<h2 class="text-lg font-semibold text-slate-800">Schedule by Event</h2>
 			<button
-				onclick={() => { showEventForm = !showEventForm; if (!showEventForm) resetEventForm(); }}
+				onclick={() => {
+					showEventForm = !showEventForm;
+					if (!showEventForm) resetEventForm();
+				}}
 				class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
 			>
 				{showEventForm ? 'Cancel' : '+ New event'}
@@ -170,33 +190,41 @@
 		</div>
 
 		{#if showEventForm}
-			<div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+			<div class="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
 				{#if eventError}
 					<p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{eventError}</p>
 				{/if}
 
 				<div class="relative">
-					<label class="mb-1 block text-xs font-medium text-slate-600">{eventForm.isLocal ? 'Name *' : 'Event name *'}</label>
+					<label class="mb-1 block text-xs font-medium text-slate-600"
+						>{eventForm.isLocal ? 'Name *' : 'Event name *'}</label
+					>
 					<input
 						type="text"
 						bind:value={eventForm.name}
 						oninput={handleNameInput}
-						onfocus={() => { if (searchResults.length > 0) showDropdown = true; }}
+						onfocus={() => {
+							if (searchResults.length > 0) showDropdown = true;
+						}}
 						onblur={() => setTimeout(() => (showDropdown = false), 200)}
 						placeholder={eventForm.isLocal ? 'e.g. Tuesday Lessons' : 'e.g. SwingDiego 2026'}
 						autocomplete="off"
 						class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
 					/>
 					{#if showDropdown && searchResults.length > 0}
-						<div class="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg max-h-48 overflow-y-auto">
+						<div
+							class="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+						>
 							{#each searchResults as result (result.id)}
 								<button
 									type="button"
 									onmousedown={() => selectSearchResult(result)}
-									class="w-full px-3 py-2 text-left hover:bg-slate-50 border-b border-slate-100 last:border-0"
+									class="w-full border-b border-slate-100 px-3 py-2 text-left last:border-0 hover:bg-slate-50"
 								>
 									<p class="text-sm font-medium text-slate-800">{result.name}</p>
-									<p class="text-xs text-slate-500">{result.city}, {result.stateOrRegion} · {result.startDate} – {result.endDate}</p>
+									<p class="text-xs text-slate-500">
+										{result.city}, {result.stateOrRegion} · {result.startDate} – {result.endDate}
+									</p>
 								</button>
 							{/each}
 						</div>
@@ -275,7 +303,9 @@
 		{#if sortedEvents.length === 0 && !showEventForm}
 			<div class="rounded-xl border-2 border-dashed border-slate-200 py-12 text-center">
 				<p class="text-sm text-slate-500">No events yet.</p>
-				<p class="mt-1 text-xs text-slate-400">Create an event to start setting your availability.</p>
+				<p class="mt-1 text-xs text-slate-400">
+					Create an event to start setting your availability.
+				</p>
 			</div>
 		{:else}
 			<div class="space-y-3">
@@ -283,32 +313,53 @@
 					{@const count = blockCountForEvent(event.id)}
 					<button
 						onclick={() => selectEvent(event)}
-						class="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:shadow-md transition-shadow"
+						class="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md"
 					>
 						<div class="flex items-center justify-between">
 							<div>
 								<div class="flex items-center gap-2">
 									<p class="font-semibold text-slate-800">{event.name}</p>
 									{#if event.isLocal}
-										<span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">Local</span>
+										<span
+											class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500"
+											>Local</span
+										>
 									{:else}
-										<span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">Event</span>
+										<span
+											class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700"
+											>Event</span
+										>
 									{/if}
 								</div>
 								<p class="text-sm text-slate-500">
-									{event.city}, {event.stateOrRegion} · {format(parseISO(event.startDate), 'MMM d')}–{format(parseISO(event.endDate), 'MMM d')}
+									{event.city}, {event.stateOrRegion} · {format(
+										parseISO(event.startDate),
+										'MMM d'
+									)}–{format(parseISO(event.endDate), 'MMM d')}
 								</p>
 							</div>
 							<div class="flex items-center gap-2">
 								{#if count > 0}
-									<span class="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+									<span
+										class="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700"
+									>
 										{count} block{count !== 1 ? 's' : ''}
 									</span>
 								{:else}
 									<span class="text-xs text-slate-400">No availability</span>
 								{/if}
-								<svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+								<svg
+									class="h-4 w-4 text-slate-400"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="m8.25 4.5 7.5 7.5-7.5 7.5"
+									/>
 								</svg>
 							</div>
 						</div>
@@ -323,11 +374,14 @@
 		<!-- Header -->
 		<div>
 			<div class="flex items-center gap-2">
-				<button
-					onclick={goBack}
-					class="flex items-center text-slate-400 hover:text-slate-600"
-				>
-					<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<button onclick={goBack} class="flex items-center text-slate-400 hover:text-slate-600">
+					<svg
+						class="h-5 w-5"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						viewBox="0 0 24 24"
+					>
 						<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
 					</svg>
 				</button>
@@ -340,17 +394,20 @@
 
 		<!-- Day tabs -->
 		<div class="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 text-sm">
-			{#each eventDays as day}
+			{#each eventDays as day (day)}
 				{@const count = lessonCountForDay(day)}
 				<button
 					onclick={() => (selectedDate = day)}
-					class="shrink-0 flex-1 inline-flex items-center justify-center gap-1 rounded-lg py-2 px-3 font-medium transition-colors {selectedDate === day
-						? 'bg-white shadow text-slate-800'
+					class="inline-flex flex-1 shrink-0 items-center justify-center gap-1 rounded-lg px-3 py-2 font-medium transition-colors {selectedDate ===
+					day
+						? 'bg-white text-slate-800 shadow'
 						: 'text-slate-500 hover:text-slate-700'}"
 				>
 					{formatDayTab(day)}
 					{#if count > 0}
-						<span class="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white">
+						<span
+							class="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white"
+						>
 							{count}
 						</span>
 					{/if}

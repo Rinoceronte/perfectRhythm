@@ -85,9 +85,7 @@ export async function updateStudentSkill(
 	return res.json();
 }
 
-export async function deleteStudentSkill(
-	id: string
-): Promise<ApiResponse<{ deleted: boolean }>> {
+export async function deleteStudentSkill(id: string): Promise<ApiResponse<{ deleted: boolean }>> {
 	const res = await fetch(`${BASE}/${id}`, { method: 'DELETE' });
 	return res.json();
 }

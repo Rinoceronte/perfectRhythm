@@ -24,9 +24,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		const rel = await db
 			.select({ id: coachStudents.id })
 			.from(coachStudents)
-			.where(
-				or(eq(coachStudents.coachId, user.id), eq(coachStudents.studentId, user.id))
-			)
+			.where(or(eq(coachStudents.coachId, user.id), eq(coachStudents.studentId, user.id)))
 			.limit(1);
 
 		if (rel.length === 0) {

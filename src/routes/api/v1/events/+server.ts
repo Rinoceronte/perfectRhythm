@@ -12,8 +12,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	const { session, user } = await locals.safeGetSession();
 	if (!session || !user) return err('UNAUTHORIZED', 'Not authenticated', 401);
 
-	if (user.user_metadata?.role !== 'coach')
-		return err('FORBIDDEN', 'Coach access required', 403);
+	if (user.user_metadata?.role !== 'coach') return err('FORBIDDEN', 'Coach access required', 403);
 
 	const search = url.searchParams.get('search');
 	if (search !== null) {
@@ -33,8 +32,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const { session, user } = await locals.safeGetSession();
 	if (!session || !user) return err('UNAUTHORIZED', 'Not authenticated', 401);
 
-	if (user.user_metadata?.role !== 'coach')
-		return err('FORBIDDEN', 'Coach access required', 403);
+	if (user.user_metadata?.role !== 'coach') return err('FORBIDDEN', 'Coach access required', 403);
 
 	const body = await request.json().catch(() => null);
 	const parsed = CreateEventSchema.safeParse(body);

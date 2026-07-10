@@ -27,17 +27,13 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
 	if (input.followerLevel !== undefined) updates.followerLevel = input.followerLevel;
 	if (input.yearsDancing !== undefined) updates.yearsDancing = input.yearsDancing;
 
-	const [updated] = await db
-		.update(users)
-		.set(updates)
-		.where(eq(users.id, user.id))
-		.returning({
-			id: users.id,
-			bio: users.bio,
-			leaderLevel: users.leaderLevel,
-			followerLevel: users.followerLevel,
-			yearsDancing: users.yearsDancing
-		});
+	const [updated] = await db.update(users).set(updates).where(eq(users.id, user.id)).returning({
+		id: users.id,
+		bio: users.bio,
+		leaderLevel: users.leaderLevel,
+		followerLevel: users.followerLevel,
+		yearsDancing: users.yearsDancing
+	});
 
 	return ok(updated);
 };

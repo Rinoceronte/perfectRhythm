@@ -1,11 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
-import {
-	getVideoById,
-	getReviewsForVideo,
-	isVideoOwner,
-	coachCanAccessVideo
-} from '$lib/server/services/video';
+import { getVideoById, getReviewsForVideo, coachCanAccessVideo } from '$lib/server/services/video';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const { session, user } = await locals.safeGetSession();

@@ -96,23 +96,23 @@
 	});
 </script>
 
-<div class="flex flex-col gap-2 bg-gray-50 rounded-lg p-3 border border-gray-200">
+<div class="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
 	<div class="flex items-center gap-3">
 		<!-- Record / Stop button -->
 		{#if recording}
 			<button
 				onclick={stopRecording}
-				class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+				class="flex items-center gap-2 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700"
 			>
-				<span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+				<span class="h-2 w-2 animate-pulse rounded-full bg-white"></span>
 				Stop {formatDuration(durationSec)}
 			</button>
 		{:else}
 			<button
 				onclick={startRecording}
-				class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-300 text-sm font-medium hover:bg-gray-100 transition-colors"
+				class="flex items-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-100"
 			>
-				<span class="w-3 h-3 rounded-full bg-red-500"></span>
+				<span class="h-3 w-3 rounded-full bg-red-500"></span>
 				{hasRecording ? 'Re-record' : 'Record voice-over'}
 			</button>
 		{/if}
@@ -120,7 +120,7 @@
 		{#if hasRecording && !recording}
 			<button
 				onclick={playback}
-				class="px-3 py-1.5 rounded-md border border-gray-300 text-sm hover:bg-gray-100 transition-colors"
+				class="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition-colors hover:bg-gray-100"
 			>
 				Play back
 			</button>
@@ -128,9 +128,9 @@
 	</div>
 
 	<!-- Waveform -->
-	<div bind:this={waveformEl} class="w-full min-h-12 rounded overflow-hidden">
+	<div bind:this={waveformEl} class="min-h-12 w-full overflow-hidden rounded">
 		{#if !hasRecording && !recording}
-			<div class="h-12 flex items-center justify-center text-xs text-gray-400">
+			<div class="flex h-12 items-center justify-center text-xs text-gray-400">
 				No recording yet
 			</div>
 		{/if}

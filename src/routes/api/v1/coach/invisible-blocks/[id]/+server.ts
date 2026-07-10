@@ -10,8 +10,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	const { session, user } = await locals.safeGetSession();
 	if (!session || !user) return err('UNAUTHORIZED', 'Not authenticated', 401);
 
-	if (user.user_metadata?.role !== 'coach')
-		return err('FORBIDDEN', 'Coach access required', 403);
+	if (user.user_metadata?.role !== 'coach') return err('FORBIDDEN', 'Coach access required', 403);
 
 	const { id } = params;
 	if (!id) return err('BAD_REQUEST', 'Block ID required');
