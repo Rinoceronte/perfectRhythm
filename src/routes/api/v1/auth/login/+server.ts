@@ -5,8 +5,7 @@ import { verifyPassword, createSession } from '$lib/server/services/auth';
 import { db } from '$lib/server/db';
 import { users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { dev } from '$app/environment';
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async ({ request, cookies, url }) => {
 	const body = await request.json().catch(() => null);
 	if (!body) return err('INVALID_JSON', 'Invalid request body');
 
@@ -33,7 +32,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	cookies.set('session', session.token, {
 		path: '/',
 		httpOnly: true,
-		secure: !dev,
+		secure: url.protocol === 'https:',
 		sameSite: 'lax',
 		maxAge: 30 * 24 * 60 * 60
 	});
