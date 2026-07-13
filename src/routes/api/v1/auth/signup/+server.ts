@@ -8,7 +8,7 @@ import { users, coachStudents } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 
-export const POST: RequestHandler = async ({ request, cookies, url }) => {
+export const POST: RequestHandler = async ({ request, cookies }) => {
 	const body = await request.json().catch(() => null);
 	if (!body) return err('INVALID_JSON', 'Invalid request body');
 
@@ -59,7 +59,10 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 	cookies.set('session', session.token, {
 		path: '/',
 		httpOnly: true,
-		secure: url.protocol === 'https:',
+		// Only mark Secure when actually served over HTTPS (via the proxy's
+		// X-Forwarded-Proto). adapter-node's url.protocol defaults to https even
+		// on plain HTTP, which would make browsers drop the cookie.
+		secure: request.headers.get('x-forwarded-proto') === 'https',
 		sameSite: 'lax',
 		maxAge: 30 * 24 * 60 * 60
 	});
